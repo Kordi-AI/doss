@@ -105,7 +105,9 @@ In one line: **competence may drift; safety cannot** — safety is nailed to the
 
 **P0 — memory layer (now)**
 Layout conventions, file format, check (full rules, automatic), sync, SKILL.md, tidy report.
-Acceptance: a fresh agent operates the vault correctly from SKILL.md alone; valid writes have zero friction; invalid writes bounce immediately with fixable errors (same turn under hooks, seconds under the watcher); `self/` samples 100% valid at any moment; two devices editing the same file lose nothing (loser preserved in git history + todo reminder).
+Acceptance: a fresh agent operates the vault correctly from SKILL.md alone; valid writes have zero friction; invalid writes bounce immediately with fixable errors (same turn under hooks, seconds under the watcher); invalid content never syncs and never discloses — under hooks it is fixed within the same turn (per the bounce-and-retry ruling, a bad file may exist on disk for the seconds between write and fix); two devices editing the same file lose nothing (loser preserved in git history + todo reminder).
+
+*Acceptance run 2026-07-04: all four criteria passed live (fresh haiku agent, external verification, two-device conflict sim); the "seconds under the watcher" clause is deferred until `dossier watch` ships.*
 
 **P1 — outbound gate (next; tested on Kordi)**
 policy.yaml, `dossier answer` with four levels, ask-the-owner (Kordi DM), ledger.
