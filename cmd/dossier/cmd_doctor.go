@@ -59,6 +59,17 @@ func cmdDoctor(args []string) error {
 	}
 	fmt.Println("    – Cursor       manual: paste the section into Settings → Rules → User Rules")
 
+	if home, err := os.UserHomeDir(); err == nil {
+		if _, err := os.Stat(home + "/.claude"); err == nil {
+			if claudeHooksWired(home) {
+				fmt.Println("  hooks    ✓ Claude Code write/stop hooks wired (bounce-and-retry live)")
+			} else {
+				fmt.Println("  hooks    ✗ Claude Code hooks missing")
+				broken = true
+			}
+		}
+	}
+
 	if broken {
 		if *fix {
 			fmt.Println("\nrepairing wiring:")

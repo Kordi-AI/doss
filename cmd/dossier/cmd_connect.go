@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -147,34 +148,50 @@ func cmdConnect(args []string) error {
 		content := string(raw)
 
 		if *remove {
-			updated, had := removeSection(content)
-			if !had {
-				fmt.Printf("  – %-12s nothing to remove\n", t.name)
-				continue
+			var parts []string
+			if updated, had := removeSection(content); had {
+				if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
+					return err
+				}
+				parts = append(parts, "section removed")
 			}
-			if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
-				return err
+			if t.name == "Claude Code" {
+				if removed, err := removeClaudeHooks(home); err != nil {
+					return err
+				} else if removed {
+					parts = append(parts, "hooks removed")
+				}
 			}
-			fmt.Printf("  ✓ %-12s removed from %s\n", t.name, path)
+			if len(parts) == 0 {
+				parts = append(parts, "nothing to remove")
+			}
+			fmt.Printf("  ✓ %-12s %s\n", t.name, strings.Join(parts, " · "))
 			continue
 		}
 
 		updated, existed := upsertSection(content, section)
-		if updated == content {
-			fmt.Printf("  ✓ %-12s already up to date (%s)\n", t.name, path)
-			continue
+		state := "already up to date"
+		if updated != content {
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				return err
+			}
+			if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
+				return err
+			}
+			state = "section added"
+			if existed {
+				state = "section updated"
+			}
 		}
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return err
+		// Claude Code also gets write/stop hooks: the bounce-and-retry loop.
+		if t.name == "Claude Code" {
+			hs, err := installClaudeHooks(home)
+			if err != nil {
+				return err
+			}
+			state += " · " + hs
 		}
-		if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
-			return err
-		}
-		verb := "added to"
-		if existed {
-			verb = "updated in"
-		}
-		fmt.Printf("  ✓ %-12s %s %s\n", t.name, verb, path)
+		fmt.Printf("  ✓ %-12s %s (%s)\n", t.name, state, path)
 	}
 
 	if !*remove {
@@ -186,4 +203,93 @@ the managed section sits between "` + beginMark + `" and "` + endMark + `";
 rerunning connect updates it in place, --remove deletes it.`)
 	}
 	return nil
+}
+
+// installClaudeHooks merges the dossier write/stop hooks into
+// ~/.claude/settings.json without disturbing anything else in it.
+func installClaudeHooks(home string) (string, error) {
+	path := filepath.Join(home, ".claude", "settings.json")
+	cfg := map[string]any{}
+	if raw, err := os.ReadFile(path); err == nil && len(raw) > 0 {
+		if json.Unmarshal(raw, &cfg) != nil {
+			return "hooks skipped: settings.json unparseable, add `dossier hook` manually", nil
+		}
+	}
+	if b, _ := json.Marshal(cfg); strings.Contains(string(b), "dossier hook") {
+		return "hooks ok", nil
+	}
+	hooks, _ := cfg["hooks"].(map[string]any)
+	if hooks == nil {
+		hooks = map[string]any{}
+	}
+	post, _ := hooks["PostToolUse"].([]any)
+	post = append(post, map[string]any{
+		"matcher": "Edit|Write|MultiEdit",
+		"hooks":   []any{map[string]any{"type": "command", "command": "dossier hook post-edit"}},
+	})
+	hooks["PostToolUse"] = post
+	stop, _ := hooks["Stop"].([]any)
+	stop = append(stop, map[string]any{
+		"hooks": []any{map[string]any{"type": "command", "command": "dossier hook stop"}},
+	})
+	hooks["Stop"] = stop
+	cfg["hooks"] = hooks
+	out, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, append(out, '\n'), 0o644); err != nil {
+		return "", err
+	}
+	return "hooks installed", nil
+}
+
+func removeClaudeHooks(home string) (bool, error) {
+	path := filepath.Join(home, ".claude", "settings.json")
+	raw, err := os.ReadFile(path)
+	if err != nil || !strings.Contains(string(raw), "dossier hook") {
+		return false, nil
+	}
+	cfg := map[string]any{}
+	if json.Unmarshal(raw, &cfg) != nil {
+		return false, nil
+	}
+	hooks, _ := cfg["hooks"].(map[string]any)
+	if hooks == nil {
+		return false, nil
+	}
+	for _, key := range []string{"PostToolUse", "Stop"} {
+		entries, _ := hooks[key].([]any)
+		var kept []any
+		for _, e := range entries {
+			if b, _ := json.Marshal(e); strings.Contains(string(b), "dossier hook") {
+				continue
+			}
+			kept = append(kept, e)
+		}
+		if len(kept) == 0 {
+			delete(hooks, key)
+		} else {
+			hooks[key] = kept
+		}
+	}
+	if len(hooks) == 0 {
+		delete(cfg, "hooks")
+	} else {
+		cfg["hooks"] = hooks
+	}
+	out, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return false, err
+	}
+	return true, os.WriteFile(path, append(out, '\n'), 0o644)
+}
+
+// claudeHooksWired reports whether the dossier hooks are present.
+func claudeHooksWired(home string) bool {
+	raw, err := os.ReadFile(filepath.Join(home, ".claude", "settings.json"))
+	return err == nil && strings.Contains(string(raw), "dossier hook post-edit")
 }
