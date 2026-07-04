@@ -21,7 +21,7 @@ One binary (`dossier`), git underneath, no database, no server.
   peers/         # what other people shared with you
   notes/         # scratch; never validated, never shared
   policy.yaml    # disclosure rules (default: nothing leaves)
-  ledger.log     # who was told what (P1)
+  ledger/        # who was told what — one append-only file per device
   SKILL.md       # the one-pager agents follow
 ```
 
@@ -44,13 +44,12 @@ A fact file is markdown with optional YAML frontmatter. All fields are optional;
 | `dossier connect` | auto via init; rerun after installing a new agent tool | rarely | wires every installed agent (see Wiring below); `--remove` undoes |
 | `dossier check` | agents in hook-less tools; humans after hand edits | after editing | validates files; `--changed` = only files touched since last commit |
 | `dossier sync` | agents at wrap-up; humans anytime | after a batch | commit + pull + push; refuses if validation fails |
-| `dossier status` | anyone | curiosity | one screen: counts, check result, sync state, wiring, tidy hints |
-| `dossier tidy` | anyone, when nudged | when check says "tidy due" | prints the janitor's list; read-only |
-| `dossier doctor` | anyone | when something feels off | verifies binary, vault, and wiring; `--fix` repairs wiring |
+| `dossier doctor` | anyone | curiosity / something feels off | full health on one screen — vault stats, sync, agent wiring, hooks, tidy hints; `--fix` repairs wiring (`status` is an alias) |
+| `dossier tidy` | anyone, when nudged | when doctor says "tidy due" | prints the janitor's list; read-only |
+| `dossier log` | the owner (or their agent) | curiosity / audit | "who was told what" merged across all devices; `--who` / `--device` filter |
 | `dossier uninstall` | you | leaving a machine / starting over | deletes the local vault and unwires the agents; guided confirmation, git-style safety (see below) |
 | `dossier hook` | **never by hand** — harnesses call it | automatic | the hook endpoint (`post-edit`, `stop`) |
 | `dossier answer` | agents, when an outsider asks about the owner | on demand | the outbound gate: `--to` who, `--about` which topics; returns the only lines the agent may relay |
-| `dossier log` | the owner (or their agent) | curiosity / audit | "who was told what" from the ledger; `--who` filters |
 
 ## The inspector and the courier
 
@@ -116,7 +115,7 @@ The gate decides everything deterministically:
 1. Who is asking → which policy groups they belong to.
 2. First matching rule in `policy.yaml` wins, top to bottom (like a firewall); no rule means nothing.
 3. The `give` level turns the fact into outward text — three levels, no more: `full` = the file body verbatim ("loves peanuts") · `rough` = only the owner-authored `rough:` frontmatter field ("35 hayden st" goes out as "Toronto"; no field, no disclosure) · `nothing` = refuse (passwords). When the vault has no answer at all, the agent turns around and asks the owner.
-4. Every topic gets a ledger line — including refusals. `dossier log` answers "who knows what about me".
+4. Every topic gets a ledger line — including refusals. Each device writes only its own file under `ledger/` (so syncing never conflicts), and `dossier log` merges them into one time-ordered "who knows what about me" view, tagged by device.
 
 Safety properties:
 

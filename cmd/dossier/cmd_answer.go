@@ -103,7 +103,14 @@ func writeLedger(d, to, purpose, question, topic, give, outcome string) {
 		"question": question, "topic": topic, "give": give, "outcome": outcome,
 	}
 	b, _ := json.Marshal(entry)
-	f, err := os.OpenFile(filepath.Join(d, "ledger.log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	// One ledger file per device: each device only ever appends to its own,
+	// so syncing across devices never conflicts. `dossier log` merges them.
+	dir := filepath.Join(d, "ledger")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		fmt.Fprintln(os.Stderr, "owner-side note: could not write the ledger:", err)
+		return
+	}
+	f, err := os.OpenFile(filepath.Join(dir, deviceID(d)+".log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "owner-side note: could not write the ledger:", err)
 		return

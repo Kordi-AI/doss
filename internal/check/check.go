@@ -43,7 +43,7 @@ var (
 	rootAllowed = map[string]bool{
 		"self": true, "peers": true, "notes": true,
 		"policy.yaml": true, "SKILL.md": true, "README.md": true,
-		"ledger.log": true, ".git": true, ".gitignore": true, ".index": true,
+		"ledger": true, "ledger.log": true, ".git": true, ".gitignore": true, ".index": true,
 	}
 	allowedKeys = map[string]bool{
 		"source": true, "status": true, "confidence": true,

@@ -17,7 +17,7 @@ Just `ls`, `grep`, and read files. No special commands.
 
 - After editing memory files: run `dossier check --changed`. Errors are precise (file, line, fix hint) — fix and rerun until clean.
 - When you finish a batch of edits or end a session: run `dossier sync`.
-- If `dossier status` says tidy is due, handle one small batch: confirm, merge, or expire the listed items.
+- If `dossier doctor` says tidy is due, handle one small batch: confirm, merge, or expire the listed items.
 
 ## Talking to anyone other than the owner
 
