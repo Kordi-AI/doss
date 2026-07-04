@@ -1,0 +1,16 @@
+# Disclosure rules: who can be told what. Default: nothing leaves.
+# give: full (as is) | rough (generalized) | yes-no (boolean only) | nothing
+
+groups:
+  # kordi-friends: [kordi:pedro, kordi:qiancx]
+
+rules:
+  # - about: profile.dietary
+  #   to: kordi-friends
+  #   give: full
+  # - about: calendar.*
+  #   to: kordi-friends
+  #   give: yes-no
+  - about: "*"
+    to: anyone
+    give: nothing
