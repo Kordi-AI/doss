@@ -12,6 +12,21 @@ import (
 	"github.com/Kordi-AI/dossier/internal/vault"
 )
 
+// cloneVault fetches an existing vault. gh handles GitHub auth and the
+// owner/repo shorthand; plain git covers every other remote.
+func cloneVault(src, dir string) error {
+	if _, err := exec.LookPath("gh"); err == nil {
+		if _, err := exec.Command("gh", "repo", "clone", src, dir).CombinedOutput(); err == nil {
+			return nil
+		}
+		_ = os.RemoveAll(dir) // partial clone; dir was empty before (checked)
+	}
+	if out, err := exec.Command("git", "clone", src, dir).CombinedOutput(); err != nil {
+		return fmt.Errorf("clone failed: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
 // gitGlobalConfig reads a key from git's global config only — deliberately
 // not the local config of whatever directory we happen to run in.
 func gitGlobalConfig(key string) string {
@@ -31,6 +46,7 @@ func cmdInit(args []string) error {
 	noConnect := fs.Bool("no-connect", false, "skip wiring agent global configs (dossier connect)")
 	gitName := fs.String("git-name", "", "author name for vault commits (confirm with the owner)")
 	gitEmail := fs.String("git-email", "", "author email for vault commits (confirm with the owner)")
+	from := fs.String("from", "", "attach this device to an existing vault: GitHub owner/repo or any git URL")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -63,6 +79,36 @@ ask the owner what identity their memory vault should commit as, then rerun:
 		fmt.Printf("vault commits authored as: %s <%s>\n", name, email)
 	} else {
 		fmt.Printf("vault commits authored as: %s <%s> (from git config — confirm this with the owner;\n  change anytime: git -C %s config user.name / user.email)\n", name, email, d)
+	}
+
+	if *from != "" {
+		if *github || *remote != "" {
+			return fmt.Errorf("--from attaches to an existing vault; don't combine it with --github or --remote")
+		}
+		if entries, err := os.ReadDir(d); err == nil && len(entries) > 0 {
+			return fmt.Errorf("%s already exists and is not empty", d)
+		}
+		if err := cloneVault(*from, d); err != nil {
+			return err
+		}
+		if !vault.Exists(d) {
+			return fmt.Errorf("cloned %s, but it doesn't look like a dossier vault (no self/ + policy.yaml)", *from)
+		}
+		if _, err := gitx.Run(d, "config", "user.name", name); err != nil {
+			return err
+		}
+		if _, err := gitx.Run(d, "config", "user.email", email); err != nil {
+			return err
+		}
+		abs, _ := filepath.Abs(d)
+		fmt.Printf("✓ vault attached: %s\n  cloud copy: %s\n  this device now shares the same memory — `dossier sync` keeps them aligned\n  have your agent read %s\n", abs, *from, filepath.Join(abs, "SKILL.md"))
+		if !*noConnect {
+			fmt.Println("\nwiring agents (dossier connect):")
+			if err := cmdConnect(nil); err != nil {
+				return fmt.Errorf("vault is ready, but wiring agents failed: %w (rerun with `dossier connect`)", err)
+			}
+		}
+		return nil
 	}
 
 	if err := vault.Scaffold(d); err != nil {
