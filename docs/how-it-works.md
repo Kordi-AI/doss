@@ -40,7 +40,7 @@ A fact file is markdown with optional YAML frontmatter. All fields are optional;
 
 | Command | Who runs it | When | What it does |
 | --- | --- | --- | --- |
-| `dossier init` | you (or your agent, once per device) | setup | scaffold the vault + local git repo; `--github` also creates your private cloud repo; `--from <owner/repo or url>` attaches a second device to an existing vault instead; `--git-name`/`--git-email` set the commit identity (agents must ask the owner — init refuses to guess when git has no identity configured); auto-runs `connect` |
+| `dossier init` | you (or your agent, once per device) | setup | in a terminal, a **guided** setup (new vs. attach-to-cloud, commit identity, optional GitHub backup with token fallback); agents pass flags instead — `--github`/`--repo` for a new cloud repo, `--from <owner/repo or url>` to attach a device, `--remote <url>` for any git host, `--git-name`/`--git-email` for the commit identity (init refuses to guess when git has no identity); auto-runs `connect`. Guided mode triggers only on a real terminal, so agent runs are never blocked on a prompt. |
 | `dossier connect` | auto via init; rerun after installing a new agent tool | rarely | wires every installed agent (see Wiring below); `--remove` undoes |
 | `dossier check` | agents in hook-less tools; humans after hand edits | after editing | validates files; `--changed` = only files touched since last commit |
 | `dossier sync` | agents at wrap-up; humans anytime | after a batch | commit + pull + push; refuses if validation fails |

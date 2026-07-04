@@ -15,24 +15,20 @@ Status: v0 in development · [Design](docs/design/plan-v0.1.md) · [Roadmap issu
 
 ```sh
 git clone https://github.com/Kordi-AI/dossier && cd dossier && ./install.sh
-dossier init --github   # creates your own private GitHub repo as the cloud copy; drop --github to stay local
+dossier init            # guided setup — just answer the questions
 ```
+
+Run in a terminal, `dossier init` walks you through it: new vault or connect to an existing cloud one · the name/email your vault commits as · whether to back it up to a private GitHub repo (it takes a token if `gh` isn't logged in).
 
 **Option 2 — paste this to your agent**
 
 > Please install Dossier and set up my memory vault:
 > 1. `git clone https://github.com/Kordi-AI/dossier && cd dossier && ./install.sh`
-> 2. **Ask me** which name and email my vault's git commits should use, then run `dossier init --github --git-name "…" --git-email "…"` (drop `--github` if I don't have gh or don't want a cloud copy)
+> 2. **Ask me** which name and email my vault's git commits should use, then run `dossier init --github --git-name "…" --git-email "…"` (drop `--github` if I don't have gh or don't want a cloud copy; use `--from owner/repo` if I already have a cloud vault)
 > 3. Check the `connect` output it prints: if your own tool is NOT listed there, wire yourself with `dossier connect --file <the instruction file you load every session>`.
 > 4. Read `~/.dossier/SKILL.md` and manage my memory by its rules from now on.
 
-**Second device?** Don't create a new vault — attach to your existing one:
-
-```sh
-dossier init --from ShenzheZhu/my-dossier   # GitHub owner/repo, or any git URL
-```
-
-It clones your vault, wires the agents on that machine, and from then on `dossier sync` keeps every device on the same memory.
+**Second device?** Run `dossier init` and pick *"connect to my existing cloud vault"* — give it your repo (e.g. `ShenzheZhu/my-dossier`) and every device shares one memory, kept aligned by `dossier sync`. Agents can skip the questions with `dossier init --from owner/repo`.
 
 `init` automatically runs `dossier connect`, which drops a small managed section into each installed agent's **always-loaded global instruction file** — `~/.claude/CLAUDE.md` (Claude Code), `~/.codex/AGENTS.md` (Codex), `~/.gemini/GEMINI.md` (Gemini CLI), OpenClaw's workspace `AGENTS.md`, Windsurf's global rules. Agents we've never heard of work too: `dossier connect --file <the instruction file it always loads>`. The section carries the vault path and the non-negotiables and is injected deterministically into every session of every project. Whichever agent sets Dossier up, every other agent on the machine discovers it in its next session.
 
