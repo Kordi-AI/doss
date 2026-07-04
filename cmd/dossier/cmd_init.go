@@ -17,6 +17,7 @@ func cmdInit(args []string) error {
 	github := fs.Bool("github", false, "create a private GitHub repo as the cloud copy (requires gh)")
 	repo := fs.String("repo", "my-dossier", "repo name used with --github")
 	remote := fs.String("remote", "", "attach an existing git remote URL as the cloud copy")
+	noConnect := fs.Bool("no-connect", false, "skip wiring agent global configs (dossier connect)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -75,14 +76,20 @@ func cmdInit(args []string) error {
 cloud sync: %s
 
 next steps:
-  1. run "dossier connect" — every agent on this machine will load the rules in all projects
-  2. have your agent read %s
-  3. edit memory freely; run "dossier check --changed" after edits, "dossier sync" when done
+  1. have your agent read %s
+  2. edit memory freely; run "dossier check --changed" after edits, "dossier sync" when done
 `, abs, cloud, filepath.Join(abs, "SKILL.md"))
 
 	if !*github && *remote == "" {
-		fmt.Println(`  3. add cloud sync anytime: dossier init is done, so use
+		fmt.Println(`  3. add cloud sync anytime:
        git -C ` + abs + ` remote add origin <url>   (or: gh repo create my-dossier --private --source ` + abs + ` --remote origin --push)`)
+	}
+
+	if !*noConnect {
+		fmt.Println("\nwiring agents (dossier connect):")
+		if err := cmdConnect(nil); err != nil {
+			return fmt.Errorf("vault is ready, but wiring agents failed: %w (rerun with `dossier connect`)", err)
+		}
 	}
 	_ = os.Stdout.Sync()
 	return nil
