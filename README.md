@@ -23,7 +23,8 @@ dossier init --github   # creates your own private GitHub repo as the cloud copy
 > Please install Dossier and set up my memory vault:
 > 1. `git clone https://github.com/Kordi-AI/dossier && cd dossier && ./install.sh`
 > 2. Run `dossier init --github` (use plain `dossier init` if I don't have gh or don't want a cloud copy)
-> 3. Read `~/.dossier/SKILL.md` and manage my memory by its rules from now on.
+> 3. Check the `connect` output it prints: if your own tool is NOT listed there, wire yourself with `dossier connect --file <the instruction file you load every session>`.
+> 4. Read `~/.dossier/SKILL.md` and manage my memory by its rules from now on.
 
 `init` automatically runs `dossier connect`, which drops a small managed section into each installed agent's **always-loaded global instruction file** — `~/.claude/CLAUDE.md` (Claude Code), `~/.codex/AGENTS.md` (Codex), `~/.gemini/GEMINI.md` (Gemini CLI), OpenClaw's workspace `AGENTS.md`, Windsurf's global rules. Agents we've never heard of work too: `dossier connect --file <the instruction file it always loads>`. The section carries the vault path and the non-negotiables and is injected deterministically into every session of every project. Whichever agent sets Dossier up, every other agent on the machine discovers it in its next session.
 

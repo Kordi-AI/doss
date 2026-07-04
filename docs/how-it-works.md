@@ -93,6 +93,8 @@ If a hook-less agent forgets: nothing is lost and nothing dirty escapes — sync
 
 Custom `--file` targets are remembered (machine-locally, in `~/.config/dossier/connect.json`) and refreshed by every future `connect`, audited by `doctor`, and stripped by `--remove` — exactly like presets.
 
+**Unknown agents wire themselves.** The install prompt tells the installing agent to check `connect`'s output, and that output explicitly instructs any agent whose tool wasn't listed to run `connect --file` on its own instruction file — the agent knows its own config layout better than we do. If a tool has no always-loaded file at all, the fallback is to add "read the vault's SKILL.md first" to wherever its standing instructions live; without any persistent instruction mechanism, no one can wire a tool permanently.
+
 For Claude Code, connect also merges the two hooks into `~/.claude/settings.json` (your existing settings are preserved; `--remove` strips both cleanly).
 
 Properties: injection is deterministic (harness behavior, not model judgment — verified live in Claude Code and Codex); rerunning connect updates the section in place; only tools already installed get wired, so rerun connect after installing a new agent; `dossier doctor` audits all of it.
