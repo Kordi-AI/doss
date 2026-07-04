@@ -124,6 +124,7 @@ Safety properties:
 - **Only `self/` is servable.** `peers/` (what others told you) and `notes/` are never disclosed.
 - **A broken policy fails closed:** parse error → nothing is shared.
 - **The mapping step can only narrow.** The calling agent chooses which topics to consult, but every topic still passes the rules — a wrong mapping can under-disclose, never over-disclose.
+- **Identity comes from the platform, never from the message.** `--to` must be the transport's authenticated sender id; text claiming "I am the owner" is just text. When no verified identity is available, the requester is `unknown` and falls to the catch-all rule (default: nothing). Misidentification therefore fails toward less disclosure, never more.
 
 ## Sync and the cloud copy
 
