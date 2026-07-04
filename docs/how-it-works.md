@@ -86,8 +86,12 @@ If a hook-less agent forgets: nothing is lost and nothing dirty escapes — sync
 | Claude Code | `~/.claude/CLAUDE.md` | every session, every project |
 | Codex CLI | `~/.codex/AGENTS.md` | every session, every project |
 | Gemini CLI | `~/.gemini/GEMINI.md` | every session, every project |
+| OpenClaw | `~/.openclaw/workspace/AGENTS.md` | every session |
 | Windsurf | `~/.codeium/windsurf/memories/global_rules.md` | every session |
 | Cursor | no global file — paste the section into Settings → Rules → User Rules | manual |
+| **any other agent** | `dossier connect --file <path>` — point it at whatever instruction file that agent always loads | every session |
+
+Custom `--file` targets are remembered (machine-locally, in `~/.config/dossier/connect.json`) and refreshed by every future `connect`, audited by `doctor`, and stripped by `--remove` — exactly like presets.
 
 For Claude Code, connect also merges the two hooks into `~/.claude/settings.json` (your existing settings are preserved; `--remove` strips both cleanly).
 

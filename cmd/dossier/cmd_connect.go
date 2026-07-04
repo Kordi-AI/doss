@@ -30,7 +30,52 @@ var connectTargets = []connectTarget{
 	{"Claude Code", []string{".claude", "CLAUDE.md"}},
 	{"Codex CLI", []string{".codex", "AGENTS.md"}},
 	{"Gemini CLI", []string{".gemini", "GEMINI.md"}},
+	{"OpenClaw", []string{".openclaw", "workspace", "AGENTS.md"}},
 	{"Windsurf", []string{".codeium", "windsurf", "memories", "global_rules.md"}},
+}
+
+// Custom targets cover any agent we've never heard of: the user points us at
+// whatever instruction file that agent always loads, and we treat it exactly
+// like a preset from then on. The list is machine-local (installed tools
+// differ per device), so it lives under ~/.config, not in the vault.
+func customCfgPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".config", "dossier", "connect.json"), nil
+}
+
+func loadCustomTargets() []string {
+	p, err := customCfgPath()
+	if err != nil {
+		return nil
+	}
+	raw, err := os.ReadFile(p)
+	if err != nil {
+		return nil
+	}
+	var cfg struct {
+		Files []string `json:"files"`
+	}
+	if json.Unmarshal(raw, &cfg) != nil {
+		return nil
+	}
+	return cfg.Files
+}
+
+func saveCustomTargets(files []string) error {
+	p, err := customCfgPath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return err
+	}
+	out, _ := json.MarshalIndent(struct {
+		Files []string `json:"files"`
+	}{files}, "", "  ")
+	return os.WriteFile(p, append(out, '\n'), 0o644)
 }
 
 func dossierSection(vaultDir string) string {
@@ -119,6 +164,22 @@ func wiringStates() []wiringState {
 		}
 		out = append(out, st)
 	}
+	for _, p := range loadCustomTargets() {
+		st := wiringState{name: "custom", path: p, installed: true}
+		raw, err := os.ReadFile(p)
+		content := string(raw)
+		begin := strings.Index(content, beginMark)
+		end := strings.Index(content, endMark)
+		switch {
+		case err != nil, begin < 0, end <= begin:
+			st.status = "missing"
+		case content[begin:end+len(endMark)] == section:
+			st.status = "wired"
+		default:
+			st.status = "outdated"
+		}
+		out = append(out, st)
+	}
 	return out
 }
 
@@ -126,6 +187,7 @@ func cmdConnect(args []string) error {
 	fs := flag.NewFlagSet("connect", flag.ExitOnError)
 	remove := fs.Bool("remove", false, "remove the Dossier section from all agent instruction files")
 	all := fs.Bool("all", false, "also write for agents that don't appear to be installed")
+	file := fs.String("file", "", "wire a custom agent: path to any instruction file it always loads")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -135,6 +197,26 @@ func cmdConnect(args []string) error {
 		return err
 	}
 	section := dossierSection(vault.Dir())
+
+	customs := loadCustomTargets()
+	if *file != "" {
+		abs, err := filepath.Abs(*file)
+		if err != nil {
+			return err
+		}
+		known := false
+		for _, c := range customs {
+			if c == abs {
+				known = true
+			}
+		}
+		if !known {
+			customs = append(customs, abs)
+			if err := saveCustomTargets(customs); err != nil {
+				return err
+			}
+		}
+	}
 
 	for _, t := range connectTargets {
 		path := filepath.Join(append([]string{home}, t.path...)...)
@@ -194,10 +276,46 @@ func cmdConnect(args []string) error {
 		fmt.Printf("  ✓ %-12s %s (%s)\n", t.name, state, path)
 	}
 
+	for _, p := range customs {
+		raw, _ := os.ReadFile(p)
+		content := string(raw)
+		if *remove {
+			if updated, had := removeSection(content); had {
+				if err := os.WriteFile(p, []byte(updated), 0o644); err != nil {
+					return err
+				}
+				fmt.Printf("  ✓ %-12s removed from %s\n", "custom", p)
+			}
+			continue
+		}
+		updated, existed := upsertSection(content, section)
+		if updated == content {
+			fmt.Printf("  ✓ %-12s already up to date (%s)\n", "custom", p)
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(p, []byte(updated), 0o644); err != nil {
+			return err
+		}
+		verb := "added to"
+		if existed {
+			verb = "updated in"
+		}
+		fmt.Printf("  ✓ %-12s %s %s\n", "custom", verb, p)
+	}
+	if *remove && len(customs) > 0 {
+		if err := saveCustomTargets(nil); err != nil {
+			return err
+		}
+	}
+
 	if !*remove {
 		fmt.Println(`
 tools without a global instruction file (paste the section by hand):
   Cursor        Settings → Rules → User Rules
+any other agent: dossier connect --file <the instruction file it always loads>
 
 the managed section sits between "` + beginMark + `" and "` + endMark + `";
 rerunning connect updates it in place, --remove deletes it.`)
