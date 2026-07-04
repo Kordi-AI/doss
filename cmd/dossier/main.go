@@ -13,6 +13,7 @@ func usage() {
 usage: dossier <command> [flags]
 
   init     create your vault (~/.dossier), optionally wire up cloud sync
+  connect  add Dossier instructions to every agent's global config (Claude Code, Codex, …)
   check    validate memory files (run after edits; errors are precise)
   sync     commit + pull + push the vault (refuses if check fails)
   status   vault health: counts, check result, sync state, tidy hints
@@ -32,6 +33,8 @@ func main() {
 	switch os.Args[1] {
 	case "init":
 		err = cmdInit(os.Args[2:])
+	case "connect":
+		err = cmdConnect(os.Args[2:])
 	case "check":
 		err = cmdCheck(os.Args[2:])
 	case "sync":

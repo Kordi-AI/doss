@@ -16,6 +16,7 @@ Status: v0 in development · [Design](docs/design/plan-v0.1.md) · [Roadmap issu
 ```sh
 git clone https://github.com/Kordi-AI/dossier && cd dossier && ./install.sh
 dossier init --github   # creates your own private GitHub repo as the cloud copy; drop --github to stay local
+dossier connect         # every agent (Claude Code, Codex, Gemini CLI, …) now loads the rules in all projects
 ```
 
 **Option 2 — paste this to your agent**
@@ -23,7 +24,10 @@ dossier init --github   # creates your own private GitHub repo as the cloud copy
 > Please install Dossier and set up my memory vault:
 > 1. `git clone https://github.com/Kordi-AI/dossier && cd dossier && ./install.sh`
 > 2. Run `dossier init --github` (use plain `dossier init` if I don't have gh or don't want a cloud copy)
-> 3. Read `~/.dossier/SKILL.md` and manage my memory by its rules from now on.
+> 3. Run `dossier connect` so every coding agent on this machine loads the vault rules in every project.
+> 4. Read `~/.dossier/SKILL.md` and manage my memory by its rules from now on.
+
+`dossier connect` drops a small managed section into each agent's global instruction file — `~/.claude/CLAUDE.md` (Claude Code), `~/.codex/AGENTS.md` (Codex), `~/.gemini/GEMINI.md` (Gemini CLI), Windsurf's global rules — so the vault is discovered in every project without per-repo setup. Rerun to update, `--remove` to undo.
 
 ## Usage
 

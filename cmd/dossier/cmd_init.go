@@ -75,8 +75,9 @@ func cmdInit(args []string) error {
 cloud sync: %s
 
 next steps:
-  1. have your agent read %s
-  2. edit memory freely; run "dossier check --changed" after edits, "dossier sync" when done
+  1. run "dossier connect" — every agent on this machine will load the rules in all projects
+  2. have your agent read %s
+  3. edit memory freely; run "dossier check --changed" after edits, "dossier sync" when done
 `, abs, cloud, filepath.Join(abs, "SKILL.md"))
 
 	if !*github && *remote == "" {
