@@ -17,6 +17,7 @@ usage: dossier <command> [flags]
   check    validate memory files (run after edits; errors are precise)
   sync     commit + pull + push the vault (refuses if check fails)
   status   vault health: counts, check result, sync state, tidy hints
+  doctor   verify install, vault, and agent wiring; --fix repairs
   answer   the disclosure gate (ships in P1)
   version  print version
 
@@ -41,6 +42,8 @@ func main() {
 		err = cmdSync(os.Args[2:])
 	case "status":
 		err = cmdStatus(os.Args[2:])
+	case "doctor":
+		err = cmdDoctor(os.Args[2:])
 	case "answer":
 		fmt.Println("`dossier answer` (the disclosure gate) ships in P1.")
 		fmt.Println("track: https://github.com/Kordi-AI/dossier/issues/2")

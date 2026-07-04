@@ -60,6 +60,22 @@ func cmdStatus(args []string) error {
 	fmt.Printf("facts:   %d in self/ · %d in peers/ · %d notes\n", counts["self"], counts["peers"], counts["notes"])
 	fmt.Printf("check:   %d problem(s)\n", len(issues))
 	fmt.Printf("sync:    %s · last commit %s%s\n", remote, last, map[bool]string{true: " · uncommitted changes", false: ""}[dirty])
+	wired, broken := 0, 0
+	for _, w := range wiringStates() {
+		if !w.installed {
+			continue
+		}
+		if w.broken() {
+			broken++
+		} else {
+			wired++
+		}
+	}
+	wireLine := fmt.Sprintf("%d agent(s) load the rules everywhere", wired)
+	if broken > 0 {
+		wireLine += fmt.Sprintf(" · %d broken → run `dossier connect`", broken)
+	}
+	fmt.Printf("wiring:  %s\n", wireLine)
 	fmt.Printf("stale:   %d file(s) untouched for 180+ days\n", stale)
 
 	var due []string
