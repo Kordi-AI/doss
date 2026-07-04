@@ -1,17 +1,17 @@
 # Disclosure rules: who can be told what. Default: nothing leaves.
-# give: full (as is) | rough (the fact file's `rough:` field) | yes-no (boolean only) | nothing
+# give: full (say it as is) | rough (only the fact file's `rough:` field, e.g. street address → city) | nothing
 # First matching rule wins, top to bottom — keep the catch-all last.
 
 groups:
   # kordi-friends: [kordi:pedro, kordi:qiancx]
 
 rules:
-  # - about: profile.dietary
+  # - about: profile.dietary      # "loves peanuts" → said as is
   #   to: kordi-friends
   #   give: full
-  # - about: calendar.*
+  # - about: profile.address     # "35 hayden st" + rough: "Toronto" → they hear "Toronto"
   #   to: kordi-friends
-  #   give: yes-no
-  - about: "*"
+  #   give: rough
+  - about: "*"                    # passwords, everything else → "nothing to share"
     to: anyone
     give: nothing

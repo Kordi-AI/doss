@@ -63,15 +63,15 @@ rules:
   - about: profile.dietary
     to: kordi-friends
     give: full          # as is
-  - about: calendar.*
+  - about: profile.address
     to: kordi-friends
-    give: yes-no        # boolean only, no details
+    give: rough         # they hear the owner-authored blur, e.g. "Toronto"
   - about: "*"
     to: anyone
     give: nothing       # default: nothing leaves
 ```
 
-`give` has four levels: `full` (verbatim) / `rough` (generalized, e.g. address → city) / `yes-no` (boolean only) / `nothing`.
+`give` has three levels: `full` (verbatim) / `rough` (only the fact file's owner-authored `rough:` field) / `nothing`. A fourth boolean-only level was considered and cut: it needs a judge to read the fact, which either leaks it to the front-desk agent or adds an extra AI dependency — misses simply turn into "ask the owner" instead (decision log 07-04).
 
 Five commands total:
 
@@ -111,7 +111,7 @@ Acceptance: a fresh agent operates the vault correctly from SKILL.md alone; vali
 
 **P1 — outbound gate (next; tested on Kordi)**
 policy.yaml, `dossier answer` with four levels, ask-the-owner (Kordi DM), ledger.
-Acceptance (live two-person test): dietary restrictions returned verbatim; calendar answers free/busy only; missing info escalates to the owner with "answer once / answer and save"; every disclosure has a ledger entry; unvalidated or uncleared information cannot leave under any conversational strategy.
+Acceptance (live two-person test): dietary restrictions returned verbatim; the home address goes out only as its owner-authored rough value ("Toronto"); missing info escalates to the owner with "answer once / answer and save"; every disclosure has a ledger entry; unvalidated or uncleared information cannot leave under any conversational strategy.
 
 **P2 — always-on**
 `dossier serve` single binary, self-hosted (one-command docker; Tailscale/Cloudflare Tunnel for reachability); pre-cleared questions answered 24/7, gray zones push to the owner's phone.
@@ -142,6 +142,7 @@ Predicate rate limiting (approved); receipts + update/invalidation push when bot
 | 07-04 | Cloud copy v0 = the user's own **private GitHub repo** (`dossier init --github`, default name `my-dossier`); any git remote via `--remote` |
 | 07-04 | Implementation language: Go (single static binary, trivial cross-compile) — reversible if challenged |
 | 07-04 | Repo language: **English only** — code, docs, issues, PRs |
+| 07-04 | `give` reduced to three levels (full / rough / nothing); boolean-only level cut — needs a judge, and "no answer → ask the owner" covers the need |
 | 07-04 | Agent wiring (`dossier connect`, auto-run by init): pointer **section** in each agent's always-loaded global file (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.gemini/GEMINI.md, Windsurf); `dossier doctor --fix` verifies/repairs |
 | 07-04 | Per-agent **skills layer tried and cut**: live tests showed the global instruction file alone injects reliably in both Claude Code and Codex; one wiring layer is simpler to keep healthy |
 

@@ -51,7 +51,7 @@ var (
 	}
 	sourceVals = map[string]bool{"owner": true, "imported": true, "inferred": true, "peer": true}
 	statusVals = map[string]bool{"active": true, "suggested": true}
-	giveVals   = map[string]bool{"full": true, "rough": true, "yes-no": true, "nothing": true}
+	giveVals   = map[string]bool{"full": true, "rough": true, "nothing": true}
 )
 
 const maxFileSize = 128 * 1024
@@ -294,7 +294,7 @@ func checkPolicy(dir string) []Issue {
 		if !giveVals[r.Give] {
 			issues = append(issues, Issue{File: rel, Code: "E_POLICY",
 				Msg:  fmt.Sprintf("rule %d: give: %q", i+1, r.Give),
-				Hint: "one of: full, rough, yes-no, nothing"})
+				Hint: "one of: full, rough, nothing"})
 		}
 	}
 	return issues

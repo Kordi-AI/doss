@@ -114,12 +114,12 @@ The gate decides everything deterministically:
 
 1. Who is asking → which policy groups they belong to.
 2. First matching rule in `policy.yaml` wins, top to bottom (like a firewall); no rule means nothing.
-3. The `give` level turns the fact into outward text: `full` = the file body verbatim · `rough` = the owner-authored `rough:` frontmatter field (a street address blurs to `"Shanghai"`; no field, no disclosure) · `yes-no` = boolean-only, withheld until the in-gate evaluator ships (issue #2) · `nothing` = refuse.
+3. The `give` level turns the fact into outward text — three levels, no more: `full` = the file body verbatim ("loves peanuts") · `rough` = only the owner-authored `rough:` frontmatter field ("35 hayden st" goes out as "Toronto"; no field, no disclosure) · `nothing` = refuse (passwords). When the vault has no answer at all, the agent turns around and asks the owner.
 4. Every topic gets a ledger line — including refusals. `dossier log` answers "who knows what about me".
 
 Safety properties:
 
-- **Refusals never leak existence.** Denied, missing, unconfirmed, and not-yet-supported all read identically outside: "nothing to share". The ledger keeps the real outcome for the owner only.
+- **Refusals never leak existence.** Denied, missing, and unconfirmed all read identically outside: "nothing to share". The ledger keeps the real outcome for the owner only.
 - **Suggested facts never leave**, even when a rule allows `full` — guesses aren't facts until the owner confirms.
 - **Only `self/` is servable.** `peers/` (what others told you) and `notes/` are never disclosed.
 - **A broken policy fails closed:** parse error → nothing is shared.

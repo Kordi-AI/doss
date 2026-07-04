@@ -19,8 +19,8 @@ type stringList []string
 func (s *stringList) String() string     { return strings.Join(*s, ",") }
 func (s *stringList) Set(v string) error { *s = append(*s, v); return nil }
 
-// The outward text for deny, no-data, unconfirmed, and not-yet-supported is
-// identical on purpose: a refusal must not confirm that something exists.
+// The outward text for deny, no-data, and unconfirmed is identical on
+// purpose: a refusal must not confirm that something exists.
 const nothingToShare = "nothing to share"
 
 func cmdAnswer(args []string) error {
@@ -91,9 +91,6 @@ func resolveTopic(d, topic, give string) (text, outcome string) {
 		}
 		fmt.Fprintf(os.Stderr, "owner-side note: policy allows rough for %s but the file has no `rough:` field — add one to enable it\n", topic)
 		return nothingToShare, "rough-unavailable"
-	case "yes-no":
-		fmt.Fprintf(os.Stderr, "owner-side note: yes-no needs the in-gate evaluator (issue #2); withholding %s for now\n", topic)
-		return nothingToShare, "yes-no-pending"
 	default:
 		fmt.Fprintf(os.Stderr, "owner-side note: unknown give level %q for %s; treating as nothing\n", give, topic)
 		return nothingToShare, "denied"
