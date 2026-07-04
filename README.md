@@ -45,6 +45,20 @@ After setup, an agent only needs four habits (details in the generated `~/.dossi
 | Finished editing | `dossier check --changed` (errors are precise; fix and rerun) |
 | Wrapping up | `dossier sync` (unvalidated content never syncs) |
 
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `dossier init` | Create a vault, or `--from owner/repo` to attach another device |
+| `dossier connect` | Wire the vault into every installed agent (auto-run by init) |
+| `dossier check` | Validate memory files; bad writes bounce with precise errors |
+| `dossier sync` | Commit + pull + push; only validated state ever leaves |
+| `dossier answer` | The outbound gate — what may be told to whom (`--to`, `--about`) |
+| `dossier log` | Who was told what, merged across all your devices |
+| `dossier doctor` | Full health: vault, sync, wiring, hooks; `--fix` repairs (alias: `status`) |
+| `dossier tidy` | What needs your judgment: stale facts, unconfirmed guesses, notes backlog |
+| `dossier uninstall` | Delete the local vault and unwire agents (safe when a cloud copy exists) |
+
 ## Architecture
 
 ![Dossier architecture](docs/architecture.png)

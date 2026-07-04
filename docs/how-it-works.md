@@ -9,7 +9,7 @@ Your vault is a plain folder (`~/.dossier`). Agents write memory as files and re
 - an **inspector** that validates every write (milliseconds, precise errors)
 - a **courier** that commits and uploads validated changes
 - a **janitor** that lists what needs human judgment (never touches data)
-- a **gate** that decides what may be told to other people (ships in P1)
+- a **gate** that decides what may be told to other people
 
 One binary (`dossier`), git underneath, no database, no server.
 
