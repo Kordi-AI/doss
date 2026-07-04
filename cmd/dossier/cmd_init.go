@@ -6,10 +6,21 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/Kordi-AI/dossier/internal/gitx"
 	"github.com/Kordi-AI/dossier/internal/vault"
 )
+
+// gitGlobalConfig reads a key from git's global config only — deliberately
+// not the local config of whatever directory we happen to run in.
+func gitGlobalConfig(key string) string {
+	out, err := gitx.Run(".", "config", "--global", "--get", key)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
 
 func cmdInit(args []string) error {
 	fs := flag.NewFlagSet("init", flag.ExitOnError)
@@ -18,6 +29,8 @@ func cmdInit(args []string) error {
 	repo := fs.String("repo", "my-dossier", "repo name used with --github")
 	remote := fs.String("remote", "", "attach an existing git remote URL as the cloud copy")
 	noConnect := fs.Bool("no-connect", false, "skip wiring agent global configs (dossier connect)")
+	gitName := fs.String("git-name", "", "author name for vault commits (confirm with the owner)")
+	gitEmail := fs.String("git-email", "", "author email for vault commits (confirm with the owner)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -30,10 +43,38 @@ func cmdInit(args []string) error {
 		return fmt.Errorf("vault already exists at %s", d)
 	}
 
+	// The vault is the owner's personal history — commits must carry an
+	// identity the owner confirmed, not whatever git guesses from the host.
+	name := strings.TrimSpace(*gitName)
+	email := strings.TrimSpace(*gitEmail)
+	confirmed := name != "" && email != ""
+	if name == "" {
+		name = gitGlobalConfig("user.name")
+	}
+	if email == "" {
+		email = gitGlobalConfig("user.email")
+	}
+	if name == "" || email == "" {
+		return fmt.Errorf(`vault commits need a confirmed identity, and git has none configured.
+ask the owner what identity their memory vault should commit as, then rerun:
+  dossier init --git-name "Owner Name" --git-email owner@example.com`)
+	}
+	if confirmed {
+		fmt.Printf("vault commits authored as: %s <%s>\n", name, email)
+	} else {
+		fmt.Printf("vault commits authored as: %s <%s> (from git config — confirm this with the owner;\n  change anytime: git -C %s config user.name / user.email)\n", name, email, d)
+	}
+
 	if err := vault.Scaffold(d); err != nil {
 		return err
 	}
 	if _, err := gitx.Run(d, "init", "-b", "main"); err != nil {
+		return err
+	}
+	if _, err := gitx.Run(d, "config", "user.name", name); err != nil {
+		return err
+	}
+	if _, err := gitx.Run(d, "config", "user.email", email); err != nil {
 		return err
 	}
 	if _, err := gitx.Run(d, "add", "-A"); err != nil {

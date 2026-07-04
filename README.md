@@ -22,7 +22,7 @@ dossier init --github   # creates your own private GitHub repo as the cloud copy
 
 > Please install Dossier and set up my memory vault:
 > 1. `git clone https://github.com/Kordi-AI/dossier && cd dossier && ./install.sh`
-> 2. Run `dossier init --github` (use plain `dossier init` if I don't have gh or don't want a cloud copy)
+> 2. **Ask me** which name and email my vault's git commits should use, then run `dossier init --github --git-name "…" --git-email "…"` (drop `--github` if I don't have gh or don't want a cloud copy)
 > 3. Check the `connect` output it prints: if your own tool is NOT listed there, wire yourself with `dossier connect --file <the instruction file you load every session>`.
 > 4. Read `~/.dossier/SKILL.md` and manage my memory by its rules from now on.
 
