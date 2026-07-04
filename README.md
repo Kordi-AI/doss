@@ -46,6 +46,7 @@ After setup, an agent only needs four habits (details in the generated `~/.dossi
 
 ## Docs
 
+- [How it works](docs/how-it-works.md) — the detailed mechanics: commands, hooks, wiring, sync, failure modes
 - [Plan v0.1](docs/design/plan-v0.1.md) — all design decisions, with a decision log
 - [Memory compatibility draft](docs/design/memory-adapters.md) — we don't compete with memory systems; we make them governable
 - [Prior research](docs/design/archive/)
