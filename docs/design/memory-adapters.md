@@ -1,50 +1,50 @@
-# 记忆兼容层设计草案（讨论稿）
+# Memory Compatibility Layer — Draft
 
-- Date: 2026-07-04 · Status: 待讨论（issue #8）
-- 一句话：**不和 memory 系统竞争，做"让任何 memory 系统变得可治理"的一层。**
+- Date: 2026-07-04 · Status: for discussion (issue #8)
+- One line: **we don't compete with memory systems; we make any memory system governable.**
 
-## 定位
+## Positioning
 
-现有 memory 工作（Mem0、Letta/MemGPT、Zep、LangMem…）全部在优化同一件事：**你自己的 agent 回忆得更准更省**。没有任何一家做"**别人来要信息时怎么办**"。这就是我们的新场景：治理 + 同步 + 披露。记忆本身我们不必赢，兼容即可——他们负责记得好，我们负责管得住。
+Existing memory work (Mem0, Letta/MemGPT, Zep, LangMem, …) all optimizes the same thing: **your own agent recalling better and cheaper**. Nobody handles **what happens when someone else asks**. That is our scenario: governance + sync + disclosure. We don't need to win at memory itself — we stay compatible: they make you remember well, we make it governable.
 
-## 架构：三层，文件永远是老大
+## Architecture: three layers, files always win
 
 ```text
-┌─ 生态 bridges（可选）      Mem0 / Letta / Zep ⇄ 文件（带 provenance 落库）
-├─ 检索加速（可选）          .index/：SQLite FTS（+可选 embeddings），由文件增量构建
-└─ canonical 文件（永远）    self/ peers/ notes/ —— check、sync、policy、answer 只认这里
+┌─ ecosystem bridges (optional)   Mem0 / Letta / Zep ⇄ files (landed with provenance)
+├─ retrieval boost (optional)     .index/: SQLite FTS (+ optional embeddings), built incrementally from files
+└─ canonical files (always)       self/ peers/ notes/ — check, sync, policy, answer trust ONLY these
 ```
 
-三条不可妥协的不变量：
+Three non-negotiable invariants:
 
-1. **文件夹是唯一事实源**。权限、check、sync、披露全部只认文件；任何 adapter 坏掉/删掉，库完好无损。
-2. **索引是衍生缓存**。`.index/` 可随时重建、gitignore、永不进云——所以它不参与安全模型。
-3. **bridge 进来的信息按 provenance 落库**：外部系统写入的一律 `source: imported`（带 evidence 指向来源），推断类标 `suggested` 走确认流程。bridge 不能绕过 check，也永远碰不到披露路径。
+1. **The folder is the single source of truth.** Permissions, check, sync, and disclosure only read files; if any adapter breaks or disappears, the vault is intact.
+2. **Indexes are derived caches.** `.index/` is rebuildable at any time, gitignored, never synced to the cloud — so it never enters the security model.
+3. **Bridged content lands with provenance:** anything written by an external system arrives as `source: imported` (with `evidence` pointing home); inferred material is `status: suggested` and goes through confirmation. Bridges cannot bypass check and never touch the disclosure path.
 
-## 候选选型（按"差异要大"原则）
+## Candidates (picked for maximum difference)
 
-| 档位 | 方案 | 特点 | 依赖 |
+| Tier | Option | Character | Dependency |
 | --- | --- | --- | --- |
-| 极轻（默认） | plain：ls/grep/read | 零依赖、零索引，agent 原生技能 | 无 |
-| 高性能（内置） | indexed：SQLite FTS5 + 可选本地 embeddings | 毫秒全文/语义检索，从文件增量构建 | 单文件 SQLite |
-| 生态最大 | bridge: Mem0 | 用户已有 Mem0 记忆可双向导入导出 | Mem0 API |
-| 研究前沿 | bridge: Letta (MemGPT) | agentic 自编辑记忆，学术对话强 | Letta server |
-| 企业稳定（观察） | bridge: Zep | 时序知识图谱，商业化成熟 | Zep 服务 |
+| Ultra-light (default) | plain: ls/grep/read | Zero deps, zero index; native agent skills | none |
+| High-performance (built-in) | indexed: SQLite FTS5 + optional local embeddings | ms full-text/semantic search, incremental from files | single-file SQLite |
+| Biggest ecosystem | bridge: Mem0 | two-way import/export for existing Mem0 users | Mem0 API |
+| Research frontier | bridge: Letta (MemGPT) | agentic self-editing memory; strong paper dialogue | Letta server |
+| Enterprise-stable (watch) | bridge: Zep | temporal knowledge graph, mature commercially | Zep service |
 
-推荐组合：**plain 默认 + indexed 内置**（这两个不引入任何外部服务，符合"一个文件夹+一个小程序"），bridge 先做 **Mem0**（生态最大、API 简单），第二个做 **Letta**（论文对话价值），Zep 观察。
+Recommended set: **plain default + indexed built-in** (neither adds an external service — consistent with "one folder + one small program"), first bridge **Mem0** (largest ecosystem, simple API), second **Letta** (paper value), Zep on watch.
 
-## Bridge 的方向性（待定）
+## Bridge directionality (to decide)
 
-- **pull（推荐先做）**：外部系统 → 文件。单向、简单、安全（进来必过 check + provenance）。
-- **push**：文件 → 外部系统。等于把库喂给第三方服务，隐私上要过 policy（可以复用 give 档位！`bridge push` 视作一个 requester）——这个设计很优雅但先不做。
+- **pull (recommended first):** external system → files. One-way, simple, safe (everything entering passes check + provenance).
+- **push:** files → external system. This hands your vault to a third-party service, so it must pass policy — elegantly, `bridge push` can be treated as just another requester and reuse the `give` levels. Nice design; not now.
 
-## 给论文的表述
+## For the paper
 
-> Dossier is not another memory system; it is the governance layer that any memory system can sit behind. Memory work optimizes recall for the self; Dossier governs disclosure to others — an orthogonal, previously unaddressed axis.
+> Dossier is not another memory system; it is the governance layer any memory system can sit behind. Memory work optimizes recall for the self; Dossier governs disclosure to others — an orthogonal, previously unaddressed axis.
 
-## 早上要拍板的
+## To decide in the morning
 
-1. 推荐组合（plain + indexed 内置，bridge 先 Mem0 后 Letta）同意吗？
-2. bridge 先只做 pull 方向，push 走 policy 复用 give 档位——同意吗？
-3. embeddings 默认关（隐私：不把内容发给 embedding API；本地模型才默认开）——同意吗？
-4. Claude Code 的 auto-memory（本身就是文件夹）算"天然兼容"案例，README 里要不要点名？
+1. Agree with the recommended set (plain + indexed built-in; bridges Mem0 then Letta; Zep on watch)?
+2. Bridges start pull-only; push later reuses policy `give` levels?
+3. Embeddings off by default (privacy: no vault content to embedding APIs; local models may default on)?
+4. Name Claude Code's auto-memory (already a folder) in the README as a natively-compatible case?

@@ -1,59 +1,59 @@
 # Dossier — Plan v0.1
 
-- Status: 当前版本（取代 `ucp-plan-v0.md`，那份留作历史）
-- Date: 2026-07-03
-- 一句话：**一个带同步的记忆文件夹，加一道只在信息出门时才启动的关卡。**
+- Status: current (supersedes the archived UCP plan v0; project renamed **Dossier** on 2026-07-03)
+- Date: 2026-07-03 (translated to English 2026-07-04)
+- One line: **a synced memory folder, plus a gate that only wakes when information leaves.**
 
-## 0. 决策原则（所有取舍都用这两条判）
+## 0. Decision principles (every trade-off is judged by these two)
 
-1. **Efficiency 只看热路径**：agent 每次读写记忆都经过的地方，必须是纯文件操作，零仪式、零等待。这条不许妥协（md/yaml 就是这么定下来的）。
-2. **Capability 放冷路径**：后台、出口、一次性配置这些 agent 感觉不到的地方，只要能提升 robustness / privacy，就做，不手软。
+1. **Efficiency is judged on the hot path only.** Anything the agent touches on every memory read/write must be plain file operations — zero ceremony, zero waiting. Non-negotiable (this is why md/yaml is the only agent-facing interface).
+2. **Capability lives on the cold path.** Background jobs, the outbound gate, one-time setup — anywhere the agent can't feel — we don't hold back if it buys robustness or privacy.
 
-推论：**机器能判的错，写入当场拦（毫秒级，agent 无感知）；机器判不了的语义问题，后台排查进队列；出门时终检**。严格和快不冲突——校验一个小文件是毫秒级的事，贵的从来是交互仪式，不是检查本身。
+Corollary: **machine-checkable mistakes are blocked at write time (milliseconds, imperceptible); semantic problems are queued for background triage; the exit is a hard gate.** Strictness and speed do not conflict here — validating a small file costs milliseconds; what was ever expensive is interface ceremony, not checking.
 
-## 1. 两条路径（全部 workflow）
+## 1. The two paths (the whole workflow)
 
-**平时 —— 就是个记事本（热路径）**
+**Daily use — it's just a notebook (hot path)**
 
-- 记东西 = 写文件；想东西 = 读文件、搜文件。没有中间步骤。
-- 每次写入立刻过机器检查（毫秒级）：合格的落库；不合格的**当场退回并报错**——错误精确到哪一行、哪个字段、该怎么改，agent 当回合修好重写（内容就在它手里，丢不了）。**库里永远只有过检的内容**，agent 读回来的永远是干净数据。
-- 多设备同步在后台跑（只同步过检状态，接收端复检）。
-- 语义体检（重复、矛盾、过期这些要理解内容才能判的问题）**不按死钟点跑**：库的"脏度"（过期条数、疑似重复数、待办积压）过了阈值，**下一次 agent 来写东西时顺手触发它做一小批清理**（每次上限几件，不冲垮手头任务）——就像内存分配触发垃圾回收，维护发生在 agent 本来就醒着的时刻，不需要额外常驻的脑子。
+- Remember = write a file; recall = read/grep files. No intermediate steps.
+- Every write is machine-checked instantly (milliseconds): valid content lands; invalid content **bounces** — the error names the file, line, and fix, and the agent retries in the same turn (the content is still in its hands; nothing is lost). **The library only ever contains validated content**, so reads always return clean data.
+- Sync runs in the background (only validated states sync; the receiving end re-validates).
+- Semantic triage (duplicates, contradictions, staleness — anything that needs understanding) is **not on a timer**: when the vault's dirt level (stale count, duplicate candidates, backlog) crosses a threshold, the next agent write also triggers a small cleanup batch (bounded, never derails the current task) — like allocation-triggered garbage collection. Maintenance happens when the agent is already awake; no standing LLM daemon.
 
-**有人来要信息 —— 才认真（冷路径）**
+**Someone asks about the owner — only now do we get serious (cold path)**
 
-- 别人问你的 agent 一个问题（纯自然语言，对方不需要装任何东西）。
-- agent 先问本地小程序："他问这个，我能说啥？"
-- 小程序查规则文件，只回三种话：**可以说的内容 / 别说 / 我去问主人**。
-- agent 照着回话；这笔问答记一笔账。
-- 硬规矩：没通过检查的信息、规则没放行的信息，出不了这道门。agent 在对外场合的上下文里只有"名片级"信息，想说更多必须过这道门——**说不出它没有的东西**。
+- An outsider asks your agent a question (plain natural language; they install nothing).
+- The agent first asks the local program: "what can I say?"
+- The program consults the policy file and returns one of three things: **cleared content / nothing / let me ask the owner**.
+- The agent replies using only that; the exchange is written to the ledger.
+- Hard rule: content that failed checks, or that policy didn't clear, cannot pass this gate. In public settings the agent's context holds only card-level information — **it cannot leak what it does not have**.
 
-## 2. 整个技术栈
+## 2. The entire stack
 
-一个文件夹 + 一个小程序（单二进制）+ git。没有数据库，没有服务框架，不依赖 MCP。
+One folder + one small single-binary program + git. No database, no server framework, no MCP dependency.
 
 ```text
 ~/.dossier/
-  self/          # 我的信息，路径即名字（self/profile/dietary.md → profile.dietary）
-  peers/         # 别人告诉我的（只登记，Dossier 不负责替我去问——传输是平台的事）
-  notes/         # 草稿随便写，永不对外
-  policy.yaml    # 规则文件：谁、问什么、给多少
-  ledger.log     # 账本：谁从我这拿过什么（只追加）
-  SKILL.md       # 教 agent 用法的一页纸
+  self/          # facts about the owner; path = topic (self/profile/dietary.md)
+  peers/         # what others shared with you (ingest only — transport is the platform's job)
+  notes/         # scratch; never leaves this machine
+  policy.yaml    # who may be told what
+  ledger.log     # who was told what (append-only)
+  SKILL.md       # the one-pager that teaches any agent the rules
 ```
 
-信息文件长这样（必填字段≈零，时间戳工具自动打）：
+A fact file (required fields ≈ zero; git records time):
 
 ```markdown
 <!-- self/profile/dietary.md -->
 ---
-confidence: high     # 可选
+confidence: high     # optional
 ---
-- 花生过敏（严重）
-- 不吃内脏
+- peanut allergy (severe)
+- no organ meats
 ```
 
-规则文件长这样：
+The policy file:
 
 ```yaml
 groups:
@@ -62,84 +62,87 @@ groups:
 rules:
   - about: profile.dietary
     to: kordi-friends
-    give: full          # 原样给
+    give: full          # as is
   - about: calendar.*
     to: kordi-friends
-    give: yes-no        # 只回答有空/没空，不给细节
+    give: yes-no        # boolean only, no details
   - about: "*"
     to: anyone
-    give: nothing       # 默认全拒；库里没有的按规则"问主人"
+    give: nothing       # default: nothing leaves
 ```
 
-`give` 一共四档：`full`（原样）/ `rough`（模糊化，如地址→城市）/ `yes-no`（只回是否）/ `nothing`。
+`give` has four levels: `full` (verbatim) / `rough` (generalized, e.g. address → city) / `yes-no` (boolean only) / `nothing`.
 
-命令一共五条：
+Five commands total:
 
-| 命令 | 干什么 | 跑在哪 |
+| Command | What it does | When it runs |
 | --- | --- | --- |
-| `dossier check` | 写入即时校验：格式、字段、类型、路径、引用；坏写入退回并报可修复的错，agent 当场重试 | 每次写入自动跑（hook 环境零窗口；watch 环境秒级） |
-| `dossier sync` | 多设备同步（git 包一层） | 后台自动 |
-| `dossier answer` | 出门关卡：查规则、给三种回答、记账 | 有人来问时 |
-| `dossier log` | 查账："谁知道我什么" | 人想看时 |
-| `dossier tidy` | 语义体检：重复、矛盾、过期进待办清单；**被标记的信息在解决前不许出门** | 脏度过阈值后，借下一次写入触发 agent 清一小批 |
+| `dossier check` | Validate writes instantly: format, fields, types, paths, references; bad writes bounce with fixable errors | Automatically on every write (hook: zero window; watcher: seconds) |
+| `dossier sync` | Multi-device merge (git underneath) | Background |
+| `dossier answer` | The outbound gate: consult rules, return one of three responses, write the ledger | When someone asks |
+| `dossier log` | Query the ledger: "who knows what about me" | On demand |
+| `dossier tidy` | Semantic triage: duplicates, contradictions, staleness → todo list; **flagged items cannot leave until resolved** | Dirt threshold crossed → piggybacks on the next write |
 
-自动化三层：有 hook 的环境（如 Claude Code）当回合反馈 → `dossier watch` 文件监听兜底 → 出门时终检。哪层都没有也不出事：不合格的信息只是出不了门。
+Automation is three layers deep: hook-capable environments (e.g. Claude Code) give same-turn feedback → `dossier watch` file watching as fallback → final validation at the exit. With none of them, nothing breaks: unvalidated content simply cannot leave.
 
-## 3. 完整性保证（砍复杂度 ≠ 砍能力）
+## 3. Integrity guarantees (cutting complexity ≠ cutting capability)
 
-- **写入检查是强制的，不是建议**：机器可判的问题（格式、字段、类型、路径、引用、路径冲突）每次写入同步执行，坏写入当场退回、报错精确可修，agent 原地重试；watcher 兜底场景下退回的内容附在待办清单里，不丢失。机器判不了的语义问题（重复、矛盾、疑似放错位置）进 tidy 清单，未解决前相关信息不得披露。
-- **历史不丢**：v0 不搞状态字段和变更日志，直接改文件——git 历史保留所有旧值，内容零丢失。审计级的历史（防篡改、可删除单条）等对账本有真实需求时再加。
-- **对外的严格性一天不晚**：出门关卡就在 P1，Kordi 现成当测试场。
+- **Write-time checking is mandatory, not advisory.** Machine-checkable problems (format, fields, types, paths, references, path collisions) run synchronously on every write; bad writes bounce with precise, fixable errors and the agent retries in place. In watcher-only setups the bounced content is attached to the todo list — nothing is lost. Semantic problems (duplicates, contradictions, suspected misplacement) go to the tidy list; affected items cannot be disclosed until resolved.
+- **History is never lost.** v0 has no status fields or change journal: edit the file directly — git history keeps every old value. Audit-grade history (tamper-proofing, single-entry deletion) waits until the ledger has real demand.
+- **Outbound strictness arrives on day one of P1** — Kordi is the ready-made test bed.
 
-### 长期不跑偏（第 1 轮和第 10000 轮一样守规矩）
+### Staying on the rails long-term (turn 1 and turn 10,000 behave the same)
 
-规则能守一万轮的前提只有一个：**不靠 agent 记住规则，靠环境反复执行规则。**
+Rules survive ten thousand turns only one way: **the environment re-enforces them; the agent's memory is never load-bearing.**
 
-1. **硬约束，永不衰减**：三道关卡都不经过 LLM 的记忆——对外场合的上下文里根本没有私密数据（说不出没有的东西）、坏写入物理上进不了库（退回）、信息出门只有 answer 一条路。agent 哪怕把规矩忘光，安全性一分不减，最多是干活变笨。
-2. **规则长在使用现场，不长在开场白**：SKILL.md 只是入职培训；真正的长期载体是每次交互的返回信息——报错信息本身就是复习材料（"缺 type 字段，格式是……"），answer 的返回自带"只能用这段话回复"，脏度提醒顺带重申规矩。agent 最听最近上下文的话，那就让系统每个输出都捎带规则。
-3. **漂移体检**：退回率上升 = agent 开始写得潦草；（Kordi 里）抽查对外消息和账本对不上 = agent 在绕闸门。发现漂移就触发重新校准——强制重读 SKILL.md、收紧提醒频率。
+1. **Hard constraints that never decay** — none of the three gates pass through LLM memory: public-facing context simply contains no private data (can't say what it doesn't have); bad writes physically cannot land (bounce); information leaves only through `answer`. An agent that forgets every rule loses competence, not safety.
+2. **Rules live at the point of use, not in the opening prompt.** SKILL.md is onboarding; the durable carrier is every interaction's return value — error messages are refreshers ("missing `type`; the format is …"), `answer` output carries "reply with this text only", dirt nudges restate the rules. Agents obey recent context; make every system output carry the relevant rule.
+3. **Drift checkups.** Rising bounce rate = the agent is getting sloppy; sampled outbound messages that don't match the ledger (on Kordi) = the agent is bypassing the gate. Detection triggers recalibration — forced re-read of SKILL.md, tighter nudge cadence.
 
-一句话：**能力可能漂移，安全不会漂移**——安全钉在环境里，不在 agent 的记性里。
+In one line: **competence may drift; safety cannot** — safety is nailed to the environment, not the agent's memory.
 
 ## 4. Roadmap
 
-**P0 —— 记忆层（现在做）**
-目录约定、文件格式、check（后台全量）、sync、SKILL.md、tidy 报告。
-验收：新 agent 只读 SKILL.md 就能正确记/查；合法写入零阻力；非法写入当场退回并附可修复的错误（hook 环境当回合、watch 环境秒级）；`self/` 任何时刻抽查都 100% 过检；两台设备改同一文件不丢数据（败方在 git 历史里，待办清单提醒确认）。
+**P0 — memory layer (now)**
+Layout conventions, file format, check (full rules, automatic), sync, SKILL.md, tidy report.
+Acceptance: a fresh agent operates the vault correctly from SKILL.md alone; valid writes have zero friction; invalid writes bounce immediately with fixable errors (same turn under hooks, seconds under the watcher); `self/` samples 100% valid at any moment; two devices editing the same file lose nothing (loser preserved in git history + todo reminder).
 
-**P1 —— 出门关卡（紧接着做，Kordi 测试）**
-policy.yaml、`dossier answer` 四档回答、问主人（Kordi DM）、账本。
-验收（双人实测）：忌口原样给；日历只回有空没空；库里没有的问主人，主人可选"答一次 / 答并存下来"；每笔有账；未过 check 或规则未放行的信息在任何对话策略下都出不了门。
+**P1 — outbound gate (next; tested on Kordi)**
+policy.yaml, `dossier answer` with four levels, ask-the-owner (Kordi DM), ledger.
+Acceptance (live two-person test): dietary restrictions returned verbatim; calendar answers free/busy only; missing info escalates to the owner with "answer once / answer and save"; every disclosure has a ledger entry; unvalidated or uncleared information cannot leave under any conversational strategy.
 
-**P2 —— 常驻与自托管**
-`dossier serve` 单二进制自托管（一键 docker；Tailscale/CF Tunnel 解决可达性）；规则已放行的问题 24/7 可答，要拍板的推手机通知。
-托管三档：不架（纯本地记忆）→ 自托管小程序 → 平台托管（Kordi）。
+**P2 — always-on**
+`dossier serve` single binary, self-hosted (one-command docker; Tailscale/Cloudflare Tunnel for reachability); pre-cleared questions answered 24/7, gray zones push to the owner's phone.
+Hosting tiers: none (local-only memory) → self-hosted daemon → platform-hosted (Kordi).
 
-**P3 —— 评测与论文**
-- 记忆主场：LoCoMo / LongMemEval 类 benchmark 对打 Mem0、Letta(MemGPT)、Zep，指标含效果 + tokens + 延迟。故事：文件式记忆打平或更好，且便宜得多。
-- 披露绝活：Kordi 双人任务测隐私（任务成功率 × 过度披露率 × 注入攻击下泄露率），含一个"policy 只写在 prompt 里"的对照组，证明上下文隔离是承重墙。
-- 长期一致性：约束遵循率随对话轮数的衰减曲线（第 10 轮 vs 第 10000 轮），对比"规则钉在环境里"和"规则只写在开场白里"两种做法——预期前者是平线、后者往下掉。
-- 攻击实验：二分攻击者（连环是/否试探逼近真实值）→ 展示限频防御前后差异。
+**P3 — evaluation & paper**
+- Home turf: LoCoMo / LongMemEval-style benchmarks vs Mem0, Letta (MemGPT), Zep — quality + tokens + latency.
+- Signature: two-person Kordi tasks measuring task success × over-disclosure rate × leakage under injection, with a "policy-in-prompt-only" control proving context isolation is load-bearing.
+- Attack study: a binary-search adversary (chained yes/no probes) before/after rate limiting.
+- Long-horizon consistency: adherence-decay curves over conversation length (rules-in-environment expected flat; rules-in-prompt expected to decay).
 
-**v1+（后置清单，都在冷路径，不着急）**
-谓词限频（防试探，已拍板要做）；双方都装时的回执与更新推送；防篡改账本与单条删除（journal/tombstone）；日历等外部系统的实时接入；团队/组织共用一个库。
+**v1+ (deferred; all cold-path)**
+Predicate rate limiting (approved); receipts + update/invalidation push when both sides run Dossier; tamper-evident ledger with single-entry deletion (journal/tombstone); live connectors (calendar etc., values as resolvable references); shared team/org vaults (in-vault roles).
 
-## 5. 已定决策记录（给 Pedro 对齐用）
+## 5. Decision log (for team alignment)
 
-| 日期 | 决策 |
+| Date | Decision |
 | --- | --- |
-| 07-03 | 名字：**Dossier**（CLI `dossier`；"UCP" 与 Google/Shopify 商业协议撞名弃用） |
-| 07-03 | 单侧协议：对方不需要装任何东西，纯自然语言就能问 |
-| 07-03 | 一库两面：记忆和对外披露是同一个文件夹，披露 = 规则过滤后的视图 |
-| 07-03 | md/yaml + 文件操作为唯一 agent 界面；MCP/A2A 最多是以后的外接方式 |
-| 07-03 | 宽进严出；efficiency 看热路径、capability 放冷路径 |
-| 07-03 | 砍掉 `dossier ask`：Dossier 管记录和把关，不管传输（问别人是平台的事） |
-| 07-03 | 对方身份：平台 id + owner 签发的 API token，够用；认错人只会少给不会多给 |
-| 07-03 | 云端：自托管为基线；Kordi 托管是便利选项 |
-| 07-03 | 对标 long-term memory 系统（Mem0/Letta/Zep），先打平主场再亮披露绝活 |
+| 07-03 | Name: **Dossier** (CLI `dossier`; "UCP" dropped — collides with Google/Shopify's Universal Commerce Protocol) |
+| 07-03 | Single-sided protocol: the other side installs nothing; plain natural language in |
+| 07-03 | One vault, two faces: memory and disclosure are the same folder; disclosure = policy-filtered view |
+| 07-03 | md/yaml files are the only agent interface; MCP/A2A at most future transport bindings |
+| 07-03 | Hot path ruthless, cold path capable; write-bounce model (no quarantine dir — precise error + same-turn retry) |
+| 07-03 | `dossier ask` cut: Dossier records and gates; it does not transport (asking others is the platform's job) |
+| 07-03 | Requester identity: platform ids + owner-issued API tokens; misidentification fails safe (less disclosure, never more) |
+| 07-03 | Cloud: self-hosted baseline; platform-hosted (Kordi) as a convenience tier |
+| 07-03 | Benchmark against long-term-memory systems (Mem0/Letta/Zep): match them at home, then show the disclosure capability nobody has |
+| 07-04 | Cloud copy v0 = the user's own **private GitHub repo** (`dossier init --github`, default name `my-dossier`); any git remote via `--remote` |
+| 07-04 | Implementation language: Go (single static binary, trivial cross-compile) — reversible if challenged |
+| 07-04 | Repo language: **English only** — code, docs, issues, PRs |
 
-## 6. 还没解的问题
+## 6. Open problems (not pretending otherwise)
 
-1. 聚合泄露（多次合规披露拼图）：限频是真缓解，本质是 open problem，论文诚实写。
-2. 实时对话里"问主人"的等待体验：靠库生长降低发生率 + 会话级临时放行，UX 层面再设计。
-3. 隐私敏感信息在云副本上的加密细节（自托管后压力小很多，P2 再定）。
+1. Aggregation leakage (compliant partial disclosures assembled into more): rate limiting is a real mitigation; the general inference problem stays open — stated honestly in the paper.
+2. The ask-the-owner wait in real-time conversations: mitigated by vault growth and session-scoped pre-clearance; UX design needed.
+3. Encryption details for sensitive content on cloud replicas (pressure much lower under self-hosting/private repos; decide in P2).
