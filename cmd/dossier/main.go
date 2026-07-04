@@ -20,7 +20,8 @@ usage: dossier <command> [flags]
   tidy     dirt report: stale facts, unconfirmed guesses, notes backlog
   doctor   verify install, vault, and agent wiring; --fix repairs
   hook     harness hook endpoint (post-edit, stop) — wired by connect
-  answer   the disclosure gate (ships in P1)
+  answer   the outbound gate: what may be told to whom (--to, --about)
+  log      the ledger: who was told what (--who filters)
   version  print version
 
 vault location: $DOSSIER_HOME, default ~/.dossier
@@ -51,8 +52,9 @@ func main() {
 	case "hook":
 		err = cmdHook(os.Args[2:])
 	case "answer":
-		fmt.Println("`dossier answer` (the disclosure gate) ships in P1.")
-		fmt.Println("track: https://github.com/Kordi-AI/dossier/issues/2")
+		err = cmdAnswer(os.Args[2:])
+	case "log":
+		err = cmdLog(os.Args[2:])
 	case "version", "--version", "-v":
 		fmt.Println("dossier", version)
 	case "help", "--help", "-h":

@@ -1,5 +1,6 @@
 # Disclosure rules: who can be told what. Default: nothing leaves.
-# give: full (as is) | rough (generalized) | yes-no (boolean only) | nothing
+# give: full (as is) | rough (the fact file's `rough:` field) | yes-no (boolean only) | nothing
+# First matching rule wins, top to bottom — keep the catch-all last.
 
 groups:
   # kordi-friends: [kordi:pedro, kordi:qiancx]

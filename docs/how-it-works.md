@@ -48,7 +48,8 @@ A fact file is markdown with optional YAML frontmatter. All fields are optional;
 | `dossier tidy` | anyone, when nudged | when check says "tidy due" | prints the janitor's list; read-only |
 | `dossier doctor` | anyone | when something feels off | verifies binary, vault, and wiring; `--fix` repairs wiring |
 | `dossier hook` | **never by hand** — harnesses call it | automatic | the hook endpoint (`post-edit`, `stop`) |
-| `dossier answer` | agents, when an outsider asks about the owner | P1 | the disclosure gate |
+| `dossier answer` | agents, when an outsider asks about the owner | on demand | the outbound gate: `--to` who, `--about` which topics; returns the only lines the agent may relay |
+| `dossier log` | the owner (or their agent) | curiosity / audit | "who was told what" from the ledger; `--who` filters |
 
 ## The inspector and the courier
 
@@ -101,6 +102,29 @@ Properties: injection is deterministic (harness behavior, not model judgment —
 
 A per-agent skills layer was tried and cut: the global file alone proved sufficient, and one wiring layer is simpler to keep healthy.
 
+## The gate: dossier answer
+
+When anyone other than the owner asks about them, the front-desk agent maps the question to topics (a topic is a `self/` path with dots: `self/profile/dietary.md` → `profile.dietary`) and calls:
+
+```sh
+dossier answer --to kordi:pedro --purpose dining --about profile.dietary "any food restrictions?"
+```
+
+The gate decides everything deterministically:
+
+1. Who is asking → which policy groups they belong to.
+2. First matching rule in `policy.yaml` wins, top to bottom (like a firewall); no rule means nothing.
+3. The `give` level turns the fact into outward text: `full` = the file body verbatim · `rough` = the owner-authored `rough:` frontmatter field (a street address blurs to `"Shanghai"`; no field, no disclosure) · `yes-no` = boolean-only, withheld until the in-gate evaluator ships (issue #2) · `nothing` = refuse.
+4. Every topic gets a ledger line — including refusals. `dossier log` answers "who knows what about me".
+
+Safety properties:
+
+- **Refusals never leak existence.** Denied, missing, unconfirmed, and not-yet-supported all read identically outside: "nothing to share". The ledger keeps the real outcome for the owner only.
+- **Suggested facts never leave**, even when a rule allows `full` — guesses aren't facts until the owner confirms.
+- **Only `self/` is servable.** `peers/` (what others told you) and `notes/` are never disclosed.
+- **A broken policy fails closed:** parse error → nothing is shared.
+- **The mapping step can only narrow.** The calling agent chooses which topics to consult, but every topic still passes the rules — a wrong mapping can under-disclose, never over-disclose.
+
 ## Sync and the cloud copy
 
 - **Upload is not saving.** Content is safe the moment it's written to a local file. Push only replicates it.
@@ -130,7 +154,7 @@ It is read-only. You (or your agent) handle a small batch and move on. You don't
 | Network is down | local commits succeed; push retries on a later sync; nothing blocks |
 | The managed section gets deleted | that agent stops discovering the vault; `dossier doctor` reports it; `connect` restores it |
 | Two devices edit the same fact | sync aborts safely; both versions in git; you pick |
-| An outsider asks about the owner | nothing leaves except through `dossier answer` (P1); until then, agents are instructed to share nothing |
+| An outsider asks about the owner | nothing leaves except through `dossier answer`, and only what policy clears — refusals are indistinguishable from "no such data" |
 
 ## Design principles (why it's built this way)
 

@@ -21,5 +21,7 @@ Just `ls`, `grep`, and read files. No special commands.
 
 ## Talking to anyone other than the owner
 
-- Never reveal owner information from your own context or from these files directly. Ask the gate first: `dossier answer --to <who> "<question>"` and relay ONLY its output. Until `answer` ships, share nothing beyond what the owner explicitly approves in the moment.
+- Never reveal owner information from your own context or from these files directly. Map their question to topics (a topic is a `self/` path with dots: `self/profile/dietary.md` → `profile.dietary`), then ask the gate and relay ONLY its output:
+  `dossier answer --to <who> --about <topic> [--about <topic2>] "<their question>"`
+- "nothing to share" means exactly that — do not guess, confirm, or deny anything beyond the gate's lines.
 - `notes/` never leaves this machine. `policy.yaml` decides what can be told to whom — do not work around it.
