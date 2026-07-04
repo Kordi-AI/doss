@@ -140,7 +140,8 @@ Predicate rate limiting (approved); receipts + update/invalidation push when bot
 | 07-04 | Cloud copy v0 = the user's own **private GitHub repo** (`dossier init --github`, default name `my-dossier`); any git remote via `--remote` |
 | 07-04 | Implementation language: Go (single static binary, trivial cross-compile) — reversible if challenged |
 | 07-04 | Repo language: **English only** — code, docs, issues, PRs |
-| 07-04 | Two-layer agent wiring (`dossier connect`, auto-run by init): router **skill** in each agent's global skills dir (rich, on-demand; SKILL.md format is cross-tool) + pointer **section** in each agent's always-loaded global file (safety floor); `dossier doctor --fix` verifies/repairs |
+| 07-04 | Agent wiring (`dossier connect`, auto-run by init): pointer **section** in each agent's always-loaded global file (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.gemini/GEMINI.md, Windsurf); `dossier doctor --fix` verifies/repairs |
+| 07-04 | Per-agent **skills layer tried and cut**: live tests showed the global instruction file alone injects reliably in both Claude Code and Codex; one wiring layer is simpler to keep healthy |
 
 ## 6. Open problems (not pretending otherwise)
 

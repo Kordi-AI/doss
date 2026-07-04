@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/Kordi-AI/dossier/internal/check"
 	"github.com/Kordi-AI/dossier/internal/gitx"
@@ -51,16 +50,12 @@ func cmdDoctor(args []string) error {
 			fmt.Printf("    – %-12s not installed\n", w.name)
 			continue
 		}
-		parts := []string{"section " + w.sectionStatus}
-		if w.skillPath != "" {
-			parts = append(parts, "skill "+w.skillStatus)
-		}
 		mark := "✓"
 		if w.broken() {
 			mark = "✗"
 			broken = true
 		}
-		fmt.Printf("    %s %-12s %s\n", mark, w.name, strings.Join(parts, " · "))
+		fmt.Printf("    %s %-12s %-9s %s\n", mark, w.name, w.status, w.path)
 	}
 	fmt.Println("    – Cursor       manual: paste the section into Settings → Rules → User Rules")
 

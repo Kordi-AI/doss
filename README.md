@@ -25,10 +25,7 @@ dossier init --github   # creates your own private GitHub repo as the cloud copy
 > 2. Run `dossier init --github` (use plain `dossier init` if I don't have gh or don't want a cloud copy)
 > 3. Read `~/.dossier/SKILL.md` and manage my memory by its rules from now on.
 
-`init` automatically runs `dossier connect`, which wires every installed agent in two layers — so whichever agent sets Dossier up, **every other agent on the machine discovers it in every project, in its next session**:
-
-1. **Router skill** (full quick-reference, loaded on demand): the same SKILL.md installed into each agent's global skills dir — `~/.claude/skills/dossier/`, `~/.codex/skills/dossier/`, `~/.gemini/skills/dossier/`. One vault, one skill template, many agents.
-2. **Pointer section** (safety floor, always in context): a few managed lines in each agent's always-loaded global file — `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`, `~/.gemini/GEMINI.md`, Windsurf's global rules — carrying the vault path and the non-negotiables, so the rules hold even in sessions where no skill gets triggered.
+`init` automatically runs `dossier connect`, which drops a small managed section into each installed agent's **always-loaded global instruction file** — `~/.claude/CLAUDE.md` (Claude Code), `~/.codex/AGENTS.md` (Codex), `~/.gemini/GEMINI.md` (Gemini CLI), Windsurf's global rules. The section carries the vault path and the non-negotiables and is injected deterministically into every session of every project — verified live in both Claude Code and Codex. Whichever agent sets Dossier up, every other agent on the machine discovers it in its next session.
 
 Installed a new agent tool later? Rerun `dossier connect`. Verify anytime with `dossier doctor` (`--fix` repairs). Undo with `dossier connect --remove`.
 
