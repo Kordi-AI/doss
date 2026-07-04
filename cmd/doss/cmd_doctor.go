@@ -18,10 +18,10 @@ const staleAfter = 180 * 24 * time.Hour
 
 // cmdDoctor is the one health command: it reports the vault (facts, freshness,
 // sync, tidy) and the plumbing (install, agent wiring, hooks), and with --fix
-// repairs the wiring. `dossier status` is an alias for it.
+// repairs the wiring. `doss status` is an alias for it.
 func cmdDoctor(args []string) error {
 	fset := flag.NewFlagSet("doctor", flag.ExitOnError)
-	fix := fset.Bool("fix", false, "repair wiring problems by running dossier connect")
+	fix := fset.Bool("fix", false, "repair wiring problems by running doss connect")
 	if err := fset.Parse(args); err != nil {
 		return err
 	}
@@ -29,12 +29,12 @@ func cmdDoctor(args []string) error {
 	var problems []string
 
 	exe, _ := os.Executable()
-	fmt.Printf("binary:  dossier %s (%s)\n", version, exe)
+	fmt.Printf("binary:  doss %s (%s)\n", version, exe)
 
 	vd := vault.Dir()
 	if !vault.Exists(vd) {
 		fmt.Printf("vault:   %s — missing\n", vd)
-		problems = append(problems, "no vault — run `dossier init`")
+		problems = append(problems, "no vault — run `doss init`")
 		printWiring(&problems, fix)
 		return finish(problems)
 	}
@@ -63,7 +63,7 @@ func cmdDoctor(args []string) error {
 		return err
 	}
 	if len(issues) > 0 {
-		problems = append(problems, fmt.Sprintf("%d check problem(s) — run `dossier check`", len(issues)))
+		problems = append(problems, fmt.Sprintf("%d check problem(s) — run `doss check`", len(issues)))
 	}
 
 	remote := "local only — no cloud copy"
@@ -149,7 +149,7 @@ func printWiring(problems *[]string, fix *bool) {
 		}
 	}
 	if broken {
-		*problems = append(*problems, "agent wiring incomplete — run `dossier connect` (or `dossier doctor --fix`)")
+		*problems = append(*problems, "agent wiring incomplete — run `doss connect` (or `doss doctor --fix`)")
 	}
 }
 

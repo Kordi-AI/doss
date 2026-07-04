@@ -57,14 +57,14 @@ func cmdUninstall(args []string) error {
 		if unpushed > 0 {
 			parts = append(parts, fmt.Sprintf("%d commit(s) not pushed since last sync", unpushed))
 		}
-		fmt.Printf("⚠️  %s are NOT in the cloud yet — run `dossier sync` first or they're lost.\n", strings.Join(parts, " and "))
+		fmt.Printf("⚠️  %s are NOT in the cloud yet — run `doss sync` first or they're lost.\n", strings.Join(parts, " and "))
 		safe = false
 	default:
 		remote, _ := gitx.Run(d, "remote", "get-url", "origin")
-		fmt.Printf("✓ Your memory stays safe in the cloud: %s\n  This only removes the local copy — re-attach anytime with `dossier init --from <repo>`.\n", strings.TrimSpace(remote))
+		fmt.Printf("✓ Your memory stays safe in the cloud: %s\n  This only removes the local copy — re-attach anytime with `doss init --from <repo>`.\n", strings.TrimSpace(remote))
 	}
 	if !*keepAgents {
-		fmt.Println("\nIt also unwires Dossier from your agents' global config.")
+		fmt.Println("\nIt also unwires Doss from your agents' global config.")
 	}
 	fmt.Println()
 
@@ -101,9 +101,9 @@ func cmdUninstall(args []string) error {
 
 	fmt.Printf("\n✓ vault deleted: %s\n", abs)
 	if hasRemote {
-		fmt.Println("  your cloud copy is untouched — `dossier init --from <repo>` brings it back on any device")
+		fmt.Println("  your cloud copy is untouched — `doss init --from <repo>` brings it back on any device")
 	}
-	fmt.Println("  the dossier binary is still installed; remove it with:  rm", binPathHint())
+	fmt.Println("  the doss binary is still installed; remove it with:  rm", binPathHint())
 	return nil
 }
 
@@ -135,5 +135,5 @@ func binPathHint() string {
 	if exe, err := os.Executable(); err == nil {
 		return exe
 	}
-	return "$(which dossier)"
+	return "$(which doss)"
 }

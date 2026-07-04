@@ -1,11 +1,11 @@
 {
-  "repo_notes": "Dossier is a single-sided protocol + Go CLI for agent-managed personal memory with governed disclosure. The vault is a plain folder of md/yaml files (self/ facts, peers/ what others shared, notes/ scratch). Agents read/write files freely on the hot path; a deterministic CLI handles validation (check), multi-device git sync (sync), the outbound disclosure gate (answer + policy.yaml, levels: full/rough/nothing), the per-device audit ledger (log), agent wiring into global instruction files (connect), health (doctor), maintenance (tidy), and teardown (uninstall). Core principle: efficiency on the hot path (plain files), capability on the cold path (background/exit). Design docs live in docs/design/. The authoritative mechanics reference is docs/how-it-works.md.",
+  "repo_notes": "Doss is a single-sided protocol + Go CLI for agent-managed personal memory with governed disclosure. The vault is a plain folder of md/yaml files (self/ facts, peers/ what others shared, notes/ scratch). Agents read/write files freely on the hot path; a deterministic CLI handles validation (check), multi-device git sync (sync), the outbound disclosure gate (answer + policy.yaml, levels: full/rough/nothing), the per-device audit ledger (log), agent wiring into global instruction files (connect), health (doctor), maintenance (tidy), and teardown (uninstall). Core principle: efficiency on the hot path (plain files), capability on the cold path (background/exit). Design docs live in docs/design/. The authoritative mechanics reference is docs/how-it-works.md.",
   "pages": [
-    { "title": "Overview", "notes": "What Dossier is and the one-vault-two-faces idea (memory inward, policy-filtered disclosure outward). Start from README.md." },
-    { "title": "CLI commands", "notes": "One page per command group. Source: cmd/dossier/*.go. Cross-reference docs/how-it-works.md 'Command reference'." },
+    { "title": "Overview", "notes": "What Doss is and the one-vault-two-faces idea (memory inward, policy-filtered disclosure outward). Start from README.md." },
+    { "title": "CLI commands", "notes": "One page per command group. Source: cmd/doss/*.go. Cross-reference docs/how-it-works.md 'Command reference'." },
     { "title": "The vault format", "notes": "Layout and fact-file frontmatter fields; validation rules in internal/check/check.go." },
-    { "title": "The disclosure gate", "notes": "How answer + internal/policy decide full/rough/nothing; refusal indistinguishability; the ledger. Source: cmd/dossier/cmd_answer.go, internal/policy/policy.go." },
-    { "title": "Agent wiring", "notes": "How connect injects the vault into each agent's global instruction file and Claude Code hooks. Source: cmd/dossier/cmd_connect.go." },
-    { "title": "Sync and multi-device", "notes": "git-backed sync, second-device attach (init --from), per-device ledgers. Source: internal/gitx, cmd/dossier/cmd_sync.go, cmd_init.go." }
+    { "title": "The disclosure gate", "notes": "How answer + internal/policy decide full/rough/nothing; refusal indistinguishability; the ledger. Source: cmd/doss/cmd_answer.go, internal/policy/policy.go." },
+    { "title": "Agent wiring", "notes": "How connect injects the vault into each agent's global instruction file and Claude Code hooks. Source: cmd/doss/cmd_connect.go." },
+    { "title": "Sync and multi-device", "notes": "git-backed sync, second-device attach (init --from), per-device ledgers. Source: internal/gitx, cmd/doss/cmd_sync.go, cmd_init.go." }
   ]
 }

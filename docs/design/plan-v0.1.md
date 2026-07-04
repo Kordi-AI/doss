@@ -1,6 +1,6 @@
-# Dossier — Plan v0.1
+# Doss — Plan v0.1
 
-- Status: current (supersedes the archived UCP plan v0; project renamed **Dossier** on 2026-07-03)
+- Status: current (supersedes the archived UCP plan v0; project renamed **Doss** on 2026-07-03)
 - Date: 2026-07-03 (translated to English 2026-07-04)
 - One line: **a synced memory folder, plus a gate that only wakes when information leaves.**
 
@@ -33,7 +33,7 @@ Corollary: **machine-checkable mistakes are blocked at write time (milliseconds,
 One folder + one small single-binary program + git. No database, no server framework, no MCP dependency.
 
 ```text
-~/.dossier/
+~/.doss/
   self/          # facts about the owner; path = topic (self/profile/dietary.md)
   peers/         # what others shared with you (ingest only — transport is the platform's job)
   notes/         # scratch; never leaves this machine
@@ -77,13 +77,13 @@ Five commands total:
 
 | Command | What it does | When it runs |
 | --- | --- | --- |
-| `dossier check` | Validate writes instantly: format, fields, types, paths, references; bad writes bounce with fixable errors | Automatically on every write (hook: zero window; watcher: seconds) |
-| `dossier sync` | Multi-device merge (git underneath) | Background |
-| `dossier answer` | The outbound gate: consult rules, return one of three responses, write the ledger | When someone asks |
-| `dossier log` | Query the ledger: "who knows what about me" | On demand |
-| `dossier tidy` | Semantic triage: duplicates, contradictions, staleness → todo list; **flagged items cannot leave until resolved** | Dirt threshold crossed → piggybacks on the next write |
+| `doss check` | Validate writes instantly: format, fields, types, paths, references; bad writes bounce with fixable errors | Automatically on every write (hook: zero window; watcher: seconds) |
+| `doss sync` | Multi-device merge (git underneath) | Background |
+| `doss answer` | The outbound gate: consult rules, return one of three responses, write the ledger | When someone asks |
+| `doss log` | Query the ledger: "who knows what about me" | On demand |
+| `doss tidy` | Semantic triage: duplicates, contradictions, staleness → todo list; **flagged items cannot leave until resolved** | Dirt threshold crossed → piggybacks on the next write |
 
-Automation is three layers deep: hook-capable environments (e.g. Claude Code) give same-turn feedback → `dossier watch` file watching as fallback → final validation at the exit. With none of them, nothing breaks: unvalidated content simply cannot leave.
+Automation is three layers deep: hook-capable environments (e.g. Claude Code) give same-turn feedback → `doss watch` file watching as fallback → final validation at the exit. With none of them, nothing breaks: unvalidated content simply cannot leave.
 
 ## 3. Integrity guarantees (cutting complexity ≠ cutting capability)
 
@@ -107,14 +107,14 @@ In one line: **competence may drift; safety cannot** — safety is nailed to the
 Layout conventions, file format, check (full rules, automatic), sync, SKILL.md, tidy report.
 Acceptance: a fresh agent operates the vault correctly from SKILL.md alone; valid writes have zero friction; invalid writes bounce immediately with fixable errors (same turn under hooks, seconds under the watcher); invalid content never syncs and never discloses — under hooks it is fixed within the same turn (per the bounce-and-retry ruling, a bad file may exist on disk for the seconds between write and fix); two devices editing the same file lose nothing (loser preserved in git history + todo reminder).
 
-*Acceptance run 2026-07-04: all four criteria passed live (fresh haiku agent, external verification, two-device conflict sim); the "seconds under the watcher" clause is deferred until `dossier watch` ships.*
+*Acceptance run 2026-07-04: all four criteria passed live (fresh haiku agent, external verification, two-device conflict sim); the "seconds under the watcher" clause is deferred until `doss watch` ships.*
 
 **P1 — outbound gate (next; tested on Kordi)**
-policy.yaml, `dossier answer` with four levels, ask-the-owner (Kordi DM), ledger.
+policy.yaml, `doss answer` with four levels, ask-the-owner (Kordi DM), ledger.
 Acceptance (live two-person test): dietary restrictions returned verbatim; the home address goes out only as its owner-authored rough value ("Toronto"); missing info escalates to the owner with "answer once / answer and save"; every disclosure has a ledger entry; unvalidated or uncleared information cannot leave under any conversational strategy.
 
 **P2 — always-on**
-`dossier serve` single binary, self-hosted (one-command docker; Tailscale/Cloudflare Tunnel for reachability); pre-cleared questions answered 24/7, gray zones push to the owner's phone.
+`doss serve` single binary, self-hosted (one-command docker; Tailscale/Cloudflare Tunnel for reachability); pre-cleared questions answered 24/7, gray zones push to the owner's phone.
 Hosting tiers: none (local-only memory) → self-hosted daemon → platform-hosted (Kordi).
 
 **P3 — evaluation & paper**
@@ -124,26 +124,26 @@ Hosting tiers: none (local-only memory) → self-hosted daemon → platform-host
 - Long-horizon consistency: adherence-decay curves over conversation length (rules-in-environment expected flat; rules-in-prompt expected to decay).
 
 **v1+ (deferred; all cold-path)**
-Predicate rate limiting (approved); receipts + update/invalidation push when both sides run Dossier; tamper-evident ledger with single-entry deletion (journal/tombstone); live connectors (calendar etc., values as resolvable references); shared team/org vaults (in-vault roles).
+Predicate rate limiting (approved); receipts + update/invalidation push when both sides run Doss; tamper-evident ledger with single-entry deletion (journal/tombstone); live connectors (calendar etc., values as resolvable references); shared team/org vaults (in-vault roles).
 
 ## 5. Decision log (for team alignment)
 
 | Date | Decision |
 | --- | --- |
-| 07-03 | Name: **Dossier** (CLI `dossier`; "UCP" dropped — collides with Google/Shopify's Universal Commerce Protocol) |
+| 07-03 | Name: **Doss** (CLI `doss`; "UCP" dropped — collides with Google/Shopify's Universal Commerce Protocol) |
 | 07-03 | Single-sided protocol: the other side installs nothing; plain natural language in |
 | 07-03 | One vault, two faces: memory and disclosure are the same folder; disclosure = policy-filtered view |
 | 07-03 | md/yaml files are the only agent interface; MCP/A2A at most future transport bindings |
 | 07-03 | Hot path ruthless, cold path capable; write-bounce model (no quarantine dir — precise error + same-turn retry) |
-| 07-03 | `dossier ask` cut: Dossier records and gates; it does not transport (asking others is the platform's job) |
+| 07-03 | `doss ask` cut: Doss records and gates; it does not transport (asking others is the platform's job) |
 | 07-03 | Requester identity: platform ids + owner-issued API tokens; misidentification fails safe (less disclosure, never more) |
 | 07-03 | Cloud: self-hosted baseline; platform-hosted (Kordi) as a convenience tier |
 | 07-03 | Benchmark against long-term-memory systems (Mem0/Letta/Zep): match them at home, then show the disclosure capability nobody has |
-| 07-04 | Cloud copy v0 = the user's own **private GitHub repo** (`dossier init --github`, default name `my-dossier`); any git remote via `--remote` |
+| 07-04 | Cloud copy v0 = the user's own **private GitHub repo** (`doss init --github`, default name `my-dossier`); any git remote via `--remote` |
 | 07-04 | Implementation language: Go (single static binary, trivial cross-compile) — reversible if challenged |
 | 07-04 | Repo language: **English only** — code, docs, issues, PRs |
 | 07-04 | `give` reduced to three levels (full / rough / nothing); boolean-only level cut — needs a judge, and "no answer → ask the owner" covers the need |
-| 07-04 | Agent wiring (`dossier connect`, auto-run by init): pointer **section** in each agent's always-loaded global file (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.gemini/GEMINI.md, Windsurf); `dossier doctor --fix` verifies/repairs |
+| 07-04 | Agent wiring (`doss connect`, auto-run by init): pointer **section** in each agent's always-loaded global file (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md, ~/.gemini/GEMINI.md, Windsurf); `doss doctor --fix` verifies/repairs |
 | 07-04 | Per-agent **skills layer tried and cut**: live tests showed the global instruction file alone injects reliably in both Claude Code and Codex; one wiring layer is simpler to keep healthy |
 
 ## 6. Open problems (not pretending otherwise)

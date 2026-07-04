@@ -1,4 +1,4 @@
-// Package gitx shells out to git; dossier keeps git as the sync substrate.
+// Package gitx shells out to git; doss keeps git as the sync substrate.
 package gitx
 
 import (

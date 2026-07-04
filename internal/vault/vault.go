@@ -1,4 +1,4 @@
-// Package vault knows where the dossier lives and how to scaffold one.
+// Package vault knows where the doss lives and how to scaffold one.
 package vault
 
 import (
@@ -12,16 +12,16 @@ import (
 //go:embed templates
 var tmpl embed.FS
 
-// Dir returns the vault directory: $DOSSIER_HOME or ~/.dossier.
+// Dir returns the vault directory: $DOSS_HOME or ~/.doss.
 func Dir() string {
-	if d := os.Getenv("DOSSIER_HOME"); d != "" {
+	if d := os.Getenv("DOSS_HOME"); d != "" {
 		return d
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".dossier"
+		return ".doss"
 	}
-	return filepath.Join(home, ".dossier")
+	return filepath.Join(home, ".doss")
 }
 
 // Exists reports whether dir already contains an initialized vault.
@@ -39,7 +39,7 @@ func Exists(dir string) bool {
 func MustExist() (string, error) {
 	d := Dir()
 	if !Exists(d) {
-		return "", fmt.Errorf("no vault at %s — run `dossier init` first", d)
+		return "", fmt.Errorf("no vault at %s — run `doss init` first", d)
 	}
 	return d, nil
 }

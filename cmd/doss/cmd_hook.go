@@ -18,7 +18,7 @@ import (
 // Exit code 2 is the harness convention for "feed stderr back to the model".
 func cmdHook(args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("usage: dossier hook <post-edit|stop>")
+		return fmt.Errorf("usage: doss hook <post-edit|stop>")
 	}
 	switch args[0] {
 	case "post-edit":
@@ -66,7 +66,7 @@ func hookPostEdit() error {
 	for _, is := range issues {
 		fmt.Fprintln(os.Stderr, is)
 	}
-	fmt.Fprintln(os.Stderr, "this write did not pass dossier check — fix the file now (errors above are precise), then it counts")
+	fmt.Fprintln(os.Stderr, "this write did not pass doss check — fix the file now (errors above are precise), then it counts")
 	os.Exit(2)
 	return nil
 }
@@ -88,20 +88,20 @@ func hookStop() error {
 		for _, is := range issues {
 			fmt.Fprintln(os.Stderr, is)
 		}
-		fmt.Fprintf(os.Stderr, "the vault has %d unresolved problem(s); fix them and run `dossier sync` before finishing\n", len(issues))
+		fmt.Fprintf(os.Stderr, "the vault has %d unresolved problem(s); fix them and run `doss sync` before finishing\n", len(issues))
 		os.Exit(2)
 	}
 	// Validated and dirty: commit. Network problems must never trap the user.
 	if _, err := gitx.Run(d, "add", "-A"); err != nil {
 		return nil
 	}
-	if _, err := gitx.Run(d, "commit", "-m", "dossier sync (session end)"); err != nil {
+	if _, err := gitx.Run(d, "commit", "-m", "doss sync (session end)"); err != nil {
 		return nil
 	}
 	if gitx.HasRemote(d) {
 		if _, err := gitx.Run(d, "pull", "--rebase", "origin", "main"); err != nil {
 			_, _ = gitx.Run(d, "rebase", "--abort")
-			fmt.Fprintln(os.Stderr, "dossier: committed locally; pull hit a conflict — run `dossier sync` by hand later")
+			fmt.Fprintln(os.Stderr, "doss: committed locally; pull hit a conflict — run `doss sync` by hand later")
 			return nil
 		}
 		_, _ = gitx.Run(d, "push", "-u", "origin", "main")

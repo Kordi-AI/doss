@@ -20,12 +20,12 @@ import (
 
 func cmdInit(args []string) error {
 	fs := flag.NewFlagSet("init", flag.ExitOnError)
-	dir := fs.String("dir", "", "vault directory (default $DOSSIER_HOME or ~/.dossier)")
+	dir := fs.String("dir", "", "vault directory (default $DOSS_HOME or ~/.doss)")
 	github := fs.Bool("github", false, "create a private GitHub repo as the cloud copy (requires gh)")
 	repo := fs.String("repo", "my-dossier", "repo name used with --github")
 	remote := fs.String("remote", "", "attach an existing git remote URL as the cloud copy")
 	from := fs.String("from", "", "attach this device to an existing vault: GitHub owner/repo or any git URL")
-	noConnect := fs.Bool("no-connect", false, "skip wiring agent global configs (dossier connect)")
+	noConnect := fs.Bool("no-connect", false, "skip wiring agent global configs (doss connect)")
 	gitName := fs.String("git-name", "", "author name for vault commits (confirm with the owner)")
 	gitEmail := fs.String("git-email", "", "author email for vault commits (confirm with the owner)")
 	interactive := fs.Bool("interactive", false, "force the guided setup even when stdin is not a terminal")
@@ -60,7 +60,7 @@ func cmdInit(args []string) error {
 		(*interactive || stdinIsTTY())
 	if guided {
 		p := newPrompter()
-		fmt.Println("Dossier setup — your agent's memory, your rules.")
+		fmt.Println("Doss setup — your agent's memory, your rules.")
 		fmt.Println()
 		if p.choose("Is this your first vault, or do you already have one in the cloud?",
 			"Create a new vault on this machine",
@@ -112,7 +112,7 @@ func cmdInit(args []string) error {
 	if name == "" || email == "" {
 		return fmt.Errorf(`vault commits need a confirmed identity, and git has none configured.
 ask the owner what identity their memory vault should commit as, then rerun:
-  dossier init --git-name "Owner Name" --git-email owner@example.com`)
+  doss init --git-name "Owner Name" --git-email owner@example.com`)
 	}
 	if confirmed || guided {
 		fmt.Printf("vault commits authored as: %s <%s>\n", name, email)
@@ -136,7 +136,7 @@ ask the owner what identity their memory vault should commit as, then rerun:
 			return err
 		}
 		if !vault.Exists(d) {
-			return fmt.Errorf("cloned %s, but it doesn't look like a dossier vault (no self/ + policy.yaml)", attachRef)
+			return fmt.Errorf("cloned %s, but it doesn't look like a doss vault (no self/ + policy.yaml)", attachRef)
 		}
 		if _, err := gitx.Run(d, "config", "user.name", name); err != nil {
 			return err
@@ -145,7 +145,7 @@ ask the owner what identity their memory vault should commit as, then rerun:
 			return err
 		}
 		abs, _ := filepath.Abs(d)
-		fmt.Printf("✓ vault attached: %s\n  cloud copy: %s\n  this device now shares the same memory — `dossier sync` keeps them aligned\n  have your agent read %s\n", abs, attachRef, filepath.Join(abs, "SKILL.md"))
+		fmt.Printf("✓ vault attached: %s\n  cloud copy: %s\n  this device now shares the same memory — `doss sync` keeps them aligned\n  have your agent read %s\n", abs, attachRef, filepath.Join(abs, "SKILL.md"))
 		return maybeConnect(*noConnect)
 	}
 
@@ -164,7 +164,7 @@ ask the owner what identity their memory vault should commit as, then rerun:
 	if _, err := gitx.Run(d, "add", "-A"); err != nil {
 		return err
 	}
-	if _, err := gitx.Run(d, "commit", "-m", "dossier: init vault"); err != nil {
+	if _, err := gitx.Run(d, "commit", "-m", "doss: init vault"); err != nil {
 		return err
 	}
 
@@ -189,7 +189,7 @@ ask the owner what identity their memory vault should commit as, then rerun:
 		}
 		out, err := exec.Command("gh", "repo", "create", *repo,
 			"--private", "--source", d, "--remote", "origin", "--push",
-			"--description", "My private Dossier memory vault").CombinedOutput()
+			"--description", "My private Doss memory vault").CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("gh repo create failed: %s", string(out))
 		}
@@ -215,7 +215,7 @@ cloud sync: %s
 
 next steps:
   1. have your agent read %s
-  2. edit memory freely; run "dossier check --changed" after edits, "dossier sync" when done
+  2. edit memory freely; run "doss check --changed" after edits, "doss sync" when done
 `, abs, cloud, filepath.Join(abs, "SKILL.md"))
 
 	if cloud == "local only" {
@@ -229,9 +229,9 @@ func maybeConnect(skip bool) error {
 	if skip {
 		return nil
 	}
-	fmt.Println("\nwiring agents (dossier connect):")
+	fmt.Println("\nwiring agents (doss connect):")
 	if err := cmdConnect(nil); err != nil {
-		return fmt.Errorf("vault is ready, but wiring agents failed: %w (rerun with `dossier connect`)", err)
+		return fmt.Errorf("vault is ready, but wiring agents failed: %w (rerun with `doss connect`)", err)
 	}
 	return nil
 }
@@ -287,7 +287,7 @@ func sanitizeToken(s, token string) string {
 
 func githubCreateRepoWithToken(token, name string) (cloneURL, fullName string, err error) {
 	req, err := http.NewRequest("POST", "https://api.github.com/user/repos",
-		strings.NewReader(fmt.Sprintf(`{"name":%q,"private":true,"description":"My private Dossier memory vault"}`, name)))
+		strings.NewReader(fmt.Sprintf(`{"name":%q,"private":true,"description":"My private Doss memory vault"}`, name)))
 	if err != nil {
 		return "", "", err
 	}

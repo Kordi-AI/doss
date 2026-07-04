@@ -115,7 +115,7 @@ func cmdTidy(args []string) error {
 		fmt.Println("\n✓ nothing needs attention")
 		return nil
 	}
-	fmt.Println("\nhandle a small batch now (a few items is enough); rerun `dossier tidy` to see progress")
+	fmt.Println("\nhandle a small batch now (a few items is enough); rerun `doss tidy` to see progress")
 	return nil
 }
 

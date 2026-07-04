@@ -43,7 +43,7 @@ func cmdSync(args []string) error {
 		if _, err := gitx.Run(d, "add", "-A"); err != nil {
 			return err
 		}
-		msg := "dossier sync: " + time.Now().Format("2006-01-02 15:04")
+		msg := "doss sync: " + time.Now().Format("2006-01-02 15:04")
 		if _, err := gitx.Run(d, "commit", "-m", msg); err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func cmdSync(args []string) error {
 	if gitx.HasRemote(d) {
 		if out, err := gitx.Run(d, "pull", "--rebase", "origin", "main"); err != nil {
 			_, _ = gitx.Run(d, "rebase", "--abort")
-			return fmt.Errorf("pull hit a conflict; sync aborted safely, nothing lost.\nresolve by hand in %s (both versions are in git), then rerun `dossier sync`.\ngit said: %s", d, out)
+			return fmt.Errorf("pull hit a conflict; sync aborted safely, nothing lost.\nresolve by hand in %s (both versions are in git), then rerun `doss sync`.\ngit said: %s", d, out)
 		}
 		if out, err := gitx.Run(d, "push", "-u", "origin", "main"); err != nil {
 			return fmt.Errorf("push failed: %s", out)

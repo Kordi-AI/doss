@@ -8,12 +8,12 @@ import (
 const version = "0.1.0-dev"
 
 func usage() {
-	fmt.Print(`dossier — a synced memory folder + a disclosure gate
+	fmt.Print(`doss — a synced memory folder + a disclosure gate
 
-usage: dossier <command> [flags]
+usage: doss <command> [flags]
 
-  init     create your vault (~/.dossier), optionally wire up cloud sync
-  connect  add Dossier instructions to every agent's global config (Claude Code, Codex, …)
+  init     create your vault (~/.doss), optionally wire up cloud sync
+  connect  add Doss instructions to every agent's global config (Claude Code, Codex, …)
   check    validate memory files (run after edits; errors are precise)
   sync     commit + pull + push the vault (refuses if check fails)
   doctor   full health: vault stats, sync, wiring, hooks, tidy hints; --fix repairs (alias: status)
@@ -24,7 +24,7 @@ usage: dossier <command> [flags]
   log      the ledger: who was told what (--who filters)
   version  print version
 
-vault location: $DOSSIER_HOME, default ~/.dossier
+vault location: $DOSS_HOME, default ~/.doss
 `)
 }
 
@@ -56,7 +56,7 @@ func main() {
 	case "log":
 		err = cmdLog(os.Args[2:])
 	case "version", "--version", "-v":
-		fmt.Println("dossier", version)
+		fmt.Println("doss", version)
 	case "help", "--help", "-h":
 		usage()
 	default:

@@ -154,7 +154,7 @@ func checkFile(dir, rel string) []Issue {
 	}
 	if len(b) > maxFileSize {
 		issues = append(issues, Issue{File: rel, Code: "E_SIZE",
-			Msg: fmt.Sprintf("file is %dKB (limit 128KB)", len(b)/1024),
+			Msg:  fmt.Sprintf("file is %dKB (limit 128KB)", len(b)/1024),
 			Hint: "split by topic — one topic per file"})
 	}
 
@@ -270,7 +270,7 @@ func checkPolicy(dir string) []Issue {
 	b, err := os.ReadFile(filepath.Join(dir, rel))
 	if err != nil {
 		return []Issue{{File: rel, Code: "E_READ", Msg: "policy.yaml missing",
-			Hint: "run `dossier init` or restore it — default is deny-all"}}
+			Hint: "run `doss init` or restore it — default is deny-all"}}
 	}
 	var p struct {
 		Groups   map[string][]string `yaml:"groups"`

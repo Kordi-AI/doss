@@ -109,7 +109,7 @@ var deviceSanitize = regexp.MustCompile(`[^a-z0-9-]+`)
 // vault's local git config (which never syncs). Hostname makes it
 // recognizable; a random suffix guarantees uniqueness across same-named hosts.
 func deviceID(d string) string {
-	if out, err := gitx.Run(d, "config", "--local", "--get", "dossier.device"); err == nil {
+	if out, err := gitx.Run(d, "config", "--local", "--get", "doss.device"); err == nil {
 		if id := strings.TrimSpace(out); id != "" {
 			return id
 		}
@@ -124,7 +124,7 @@ func deviceID(d string) string {
 		host = "device"
 	}
 	id := fmt.Sprintf("%s-%s", host, randHex(2))
-	_, _ = gitx.Run(d, "config", "--local", "dossier.device", id)
+	_, _ = gitx.Run(d, "config", "--local", "doss.device", id)
 	return id
 }
 

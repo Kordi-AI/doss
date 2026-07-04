@@ -40,7 +40,7 @@ Recommended set: **plain default + indexed built-in** (neither adds an external 
 
 ## For the paper
 
-> Dossier is not another memory system; it is the governance layer any memory system can sit behind. Memory work optimizes recall for the self; Dossier governs disclosure to others — an orthogonal, previously unaddressed axis.
+> Doss is not another memory system; it is the governance layer any memory system can sit behind. Memory work optimizes recall for the self; Doss governs disclosure to others — an orthogonal, previously unaddressed axis.
 
 ## To decide in the morning
 
