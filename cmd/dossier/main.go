@@ -19,6 +19,7 @@ usage: dossier <command> [flags]
   status   vault health: counts, check result, sync state, tidy hints
   tidy     dirt report: stale facts, unconfirmed guesses, notes backlog
   doctor   verify install, vault, and agent wiring; --fix repairs
+  uninstall  delete the local vault and unwire agents (safe when a cloud copy exists)
   hook     harness hook endpoint (post-edit, stop) — wired by connect
   answer   the outbound gate: what may be told to whom (--to, --about)
   log      the ledger: who was told what (--who filters)
@@ -47,6 +48,8 @@ func main() {
 		err = cmdStatus(os.Args[2:])
 	case "doctor":
 		err = cmdDoctor(os.Args[2:])
+	case "uninstall":
+		err = cmdUninstall(os.Args[2:])
 	case "tidy":
 		err = cmdTidy(os.Args[2:])
 	case "hook":

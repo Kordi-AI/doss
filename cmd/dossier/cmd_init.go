@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"golang.org/x/term"
+
 	"github.com/Kordi-AI/dossier/internal/gitx"
 	"github.com/Kordi-AI/dossier/internal/vault"
 )
@@ -312,8 +314,7 @@ func githubCreateRepoWithToken(token, name string) (cloneURL, fullName string, e
 // --- tiny prompt helpers (stdlib only) ---
 
 func stdinIsTTY() bool {
-	fi, err := os.Stdin.Stat()
-	return err == nil && fi.Mode()&os.ModeCharDevice != 0
+	return term.IsTerminal(int(os.Stdin.Fd()))
 }
 
 type prompter struct{ r *bufio.Reader }
@@ -357,15 +358,11 @@ func (p *prompter) choose(q string, options ...string) int {
 func (p *prompter) secret(q string) string {
 	fmt.Printf("%s (input hidden): ", q)
 	if stdinIsTTY() {
-		on := exec.Command("stty", "-echo")
-		on.Stdin = os.Stdin
-		_ = on.Run()
-		defer func() {
-			off := exec.Command("stty", "echo")
-			off.Stdin = os.Stdin
-			_ = off.Run()
-			fmt.Println()
-		}()
+		b, err := term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Println()
+		if err == nil {
+			return strings.TrimSpace(string(b))
+		}
 	}
 	line, _ := p.r.ReadString('\n')
 	return strings.TrimSpace(line)

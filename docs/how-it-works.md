@@ -47,6 +47,7 @@ A fact file is markdown with optional YAML frontmatter. All fields are optional;
 | `dossier status` | anyone | curiosity | one screen: counts, check result, sync state, wiring, tidy hints |
 | `dossier tidy` | anyone, when nudged | when check says "tidy due" | prints the janitor's list; read-only |
 | `dossier doctor` | anyone | when something feels off | verifies binary, vault, and wiring; `--fix` repairs wiring |
+| `dossier uninstall` | you | leaving a machine / starting over | deletes the local vault and unwires the agents; guided confirmation, git-style safety (see below) |
 | `dossier hook` | **never by hand** — harnesses call it | automatic | the hook endpoint (`post-edit`, `stop`) |
 | `dossier answer` | agents, when an outsider asks about the owner | on demand | the outbound gate: `--to` who, `--about` which topics; returns the only lines the agent may relay |
 | `dossier log` | the owner (or their agent) | curiosity / audit | "who was told what" from the ledger; `--who` filters |
@@ -133,6 +134,16 @@ Safety properties:
 - Offline: commits still happen locally; pushes catch up on the next sync. Worst case, the cloud copy lags — the local vault is always complete.
 - Conflicts (two devices edited the same file): sync aborts safely, both versions survive in git, and the message tells you what to do. No silent loss, ever.
 - Only validated state syncs, and the receiving end re-validates.
+
+## Removing a vault
+
+`dossier uninstall` is the inverse of setup: it unwires the agents (`connect --remove`) and deletes `~/.dossier`. Like git, it refuses to quietly destroy work that isn't backed up:
+
+- **Cloud copy exists and everything is pushed** → safe. It reminds you the memory lives in the cloud and that `dossier init --from <repo>` brings it back on any device.
+- **No cloud copy**, or **commits not pushed since the last sync**, or **uncommitted edits** → it warns and stops. Pass `--force` to override, or run `dossier sync` first.
+- In a terminal it asks you to type the vault's folder name to confirm; non-interactively it requires `--yes`.
+
+Deleting the local vault never touches the cloud copy. The `dossier` binary stays installed — remove it with `rm` if you want it gone too.
 
 ## Maintenance: the janitor
 
