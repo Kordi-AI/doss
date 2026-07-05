@@ -171,13 +171,13 @@ func checkFile(dir, rel string) []Issue {
 		body = b
 		if strings.HasPrefix(rel, "self/") {
 			issues = append(issues, Issue{File: rel, Code: "E_ROUGH",
-				Msg:  "self facts need a rough value",
-				Hint: `add frontmatter with a shareable coarse version, e.g. rough: "Toronto"`})
+				Msg:  "self facts must start with frontmatter including rough",
+				Hint: `format: --- / rough: "Toronto" / --- / full private fact body`})
 		}
 	}
 	if strings.TrimSpace(string(body)) == "" {
 		issues = append(issues, Issue{File: rel, Code: "E_EMPTY",
-			Msg: "no content", Hint: "write the fact, or delete the file"})
+			Msg: "no content", Hint: "write the full private fact body after frontmatter, or delete the file"})
 	}
 	return issues
 }
@@ -261,11 +261,11 @@ func checkFrontmatter(rel string, fm []byte) []Issue {
 			if s, ok := v.(string); !ok {
 				issues = append(issues, Issue{File: rel, Code: "E_VALUE",
 					Msg:  "rough must be a string",
-					Hint: `the blurred version of this fact, e.g. rough: "Shanghai" for a street address`})
+					Hint: `rough is the only value shared for rough disclosure, e.g. rough: "Toronto"`})
 			} else if strings.TrimSpace(s) == "" {
 				issues = append(issues, Issue{File: rel, Code: "E_ROUGH",
 					Msg:  "rough cannot be empty",
-					Hint: `write the safest shareable coarse version, e.g. rough: "Toronto"`})
+					Hint: `write the owner's safest shareable coarse value, e.g. rough: "Toronto"`})
 			}
 		}
 	}
@@ -273,7 +273,7 @@ func checkFrontmatter(rel string, fm []byte) []Issue {
 		if _, ok := m["rough"]; !ok {
 			issues = append(issues, Issue{File: rel, Code: "E_ROUGH",
 				Msg:  "self facts need a rough value",
-				Hint: `add rough: "..." to frontmatter so rough-level disclosure never requires model guessing`})
+				Hint: `add rough: "..." to frontmatter; the Markdown body remains the full private fact`})
 		}
 	}
 	// Inferred facts must stay suggestions until confirmed.

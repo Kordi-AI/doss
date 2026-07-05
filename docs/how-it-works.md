@@ -27,7 +27,7 @@ One binary (`doss`), git underneath, no database, no server.
   INSTRUCTION.md # the one-pager agents follow
 ```
 
-Content under `self/`, `peers/`, and `notes/` is Markdown. YAML is reserved for configuration files such as `policy.yaml` and `local/access.yaml`. A fact file is Markdown with YAML frontmatter; every `self/**/*.md` fact must include a non-empty `rough` value so rough-level disclosure never requires model guessing. Other fields are optional; git records time:
+Content under `self/`, `peers/`, and `notes/` is Markdown. YAML is reserved for configuration files such as `policy.yaml` and `local/access.yaml`. A fact file is Markdown with YAML frontmatter; every `self/**/*.md` fact must include a non-empty `rough` field that is used for rough disclosure. Other fields are optional; git records time:
 
 | Field | Values | Meaning |
 | --- | --- | --- |
@@ -38,6 +38,36 @@ Content under `self/`, `peers/`, and `notes/` is Markdown. YAML is reserved for 
 | `verify_by` | YYYY-MM-DD | freshness contract; past due → tidy lists it |
 | `evidence` | string | pointer to where this was learned |
 | `rough` | string | owner-authored coarse/redacted version to share instead of the raw fact |
+
+The standard `self/**/*.md` fact shape is:
+
+```markdown
+---
+source: owner
+status: active
+confidence: high
+tags: [profile]
+rough: "Toronto"
+---
+Home address: 123 King St W, Toronto.
+```
+
+The path is the topic: `self/profile/address.md` is governed by `profile/address` in `policy.yaml`. The frontmatter is metadata. The `rough:` field is the only value an agent may share for a `rough` policy grant. The body after the closing `---` is the full private fact; there is no separate `full:` field. `no` is not stored in a fact either — it is the result of no matching policy grant, or an explicit `no` policy level.
+
+For example:
+
+```yaml
+can-see:
+  friends:
+    profile/address: rough
+    profile/dietary: full
+```
+
+- `rough` on `profile/address` means share only the file's `rough:` value, such as `Toronto`.
+- `full` on `profile/dietary` means share the Markdown body after frontmatter.
+- Anything not listed means share nothing.
+
+`peers/**/*.md` and `notes/**/*.md` are also Markdown. They may use the same frontmatter shape when helpful, but `rough` is required only for `self/**/*.md`; `peers/` and `notes/` never leave the machine.
 
 ## Command reference
 

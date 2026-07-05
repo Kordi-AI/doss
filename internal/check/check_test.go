@@ -3,6 +3,7 @@ package check
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -13,6 +14,15 @@ func hasCode(issues []Issue, code string) bool {
 		}
 	}
 	return false
+}
+
+func issueByCode(issues []Issue, code string) (Issue, bool) {
+	for _, i := range issues {
+		if i.Code == code {
+			return i, true
+		}
+	}
+	return Issue{}, false
 }
 
 func write(t *testing.T, path, content string) {
@@ -96,6 +106,9 @@ func TestSelfMarkdownRequiresRough(t *testing.T) {
 	}
 	if !hasCode(issues, "E_ROUGH") {
 		t.Fatalf("self markdown without frontmatter rough should fail, got %v", issues)
+	}
+	if is, ok := issueByCode(issues, "E_ROUGH"); !ok || !strings.Contains(is.Hint, "full private fact body") {
+		t.Fatalf("E_ROUGH should explain the standard fact shape, got %v", issues)
 	}
 
 	write(t, filepath.Join(dir, "self", "profile", "address.md"), "---\nsource: owner\n---\n123 King St W\n")

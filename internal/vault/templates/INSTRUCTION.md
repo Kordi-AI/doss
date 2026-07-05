@@ -9,7 +9,28 @@ You manage this folder as your owner's long-term memory. It is plain files. Foll
 - Your own guess or anything unconfirmed → add frontmatter `source: inferred` and `status: suggested`, or park it in `notes/`.
 - **Reconcile as you write — don't pile up.** Before writing, check whether that topic's file already exists. If so, edit it in place: update the value if it changed, replace it if the new info supersedes the old, or leave it if nothing's new. Never create `dietary-2.md` / `dietary-new.md` — one topic, one file. Doing this at write time (while you're already on the topic) keeps the vault clean, so cleanup rarely needs a separate pass.
 - Content under `self/`, `peers/`, and `notes/` is Markdown. YAML is only for config files such as `policy.yaml` and `local/access.yaml`.
-- Every Markdown fact under `self/` MUST include frontmatter with a non-empty `rough` value: the safest shareable coarse version of the fact. Other frontmatter is optional. Valid keys: `source` (owner|imported|inferred|peer), `status` (active|suggested), `confidence` (high|medium|low or 0–1), `tags`, `verify_by` (YYYY-MM-DD), `evidence`, `rough`. No timestamps needed — git records time.
+- Every Markdown fact under `self/` MUST use the standard fact shape below. No timestamps needed — git records time.
+
+Standard `self/**/*.md` fact shape:
+
+```markdown
+---
+source: owner
+status: active
+confidence: high
+tags: [profile]
+rough: "Toronto"
+---
+Home address: 123 King St W, Toronto.
+```
+
+- The file path is the topic. `self/profile/address.md` becomes policy topic `profile/address`.
+- YAML frontmatter is metadata. Valid keys: `source` (owner|imported|inferred|peer), `status` (active|suggested), `confidence` (high|medium|low or 0–1), `tags`, `verify_by` (YYYY-MM-DD), `evidence`, `rough`.
+- The `rough:` field is the ONLY rough value. It must be the owner's safe coarse/redacted version of the fact, written as a string. Do not invent a rough summary during disclosure.
+- Everything after the closing `---` is the full private fact body. There is no `full:` field.
+- There is no `no:` field inside a fact. `no` means the requester has no matching `policy.yaml` grant.
+- Keep each body focused on one topic. If a file starts collecting unrelated facts, split it by topic before syncing.
+- `peers/**/*.md` and `notes/**/*.md` are also Markdown. They may use the same frontmatter shape when helpful, but `rough` is required only under `self/`; `peers/` and `notes/` never leave this machine.
 
 ## Structure examples
 
@@ -31,14 +52,27 @@ policy.yaml
 local/access.yaml
 ```
 
-Private fact with an owner-written rough value:
+Private fact at `self/profile/address.md`:
 
 ```markdown
 ---
 source: owner
+status: active
+confidence: high
 rough: "Toronto"
 ---
 Home address: 123 King St W, Toronto.
+```
+
+Another private fact at `self/profile/dietary.md`:
+
+```markdown
+---
+source: owner
+status: active
+rough: "nut allergy"
+---
+Severe peanut allergy; avoid peanut oil and mixed-nut desserts.
 ```
 
 Disclosure policy for those topics:
@@ -53,7 +87,29 @@ can-see:
     work: rough
 ```
 
-This means `friends` get only the `rough` value for `self/profile/address.md`, the full body for `self/profile/dietary.md`, rough values for everything under `self/work/`, and nothing else.
+This means:
+
+- For `self/profile/address.md`, `friends` get only `Toronto` because the policy level is `rough`.
+- For `self/profile/dietary.md`, `friends` get the full body because the policy level is `full`.
+- For any fact under `self/work/`, `friends` get only that file's `rough:` value.
+- For anything else, `friends` get nothing because unlisted means `no`.
+
+Peer note at `peers/kordi-pedro/team.md`:
+
+```markdown
+---
+source: peer
+confidence: medium
+tags: [team]
+---
+Pedro prefers async status updates before meetings.
+```
+
+Scratch note at `notes/inbox.md`:
+
+```markdown
+- Maybe confirm preferred invoice address later.
+```
 
 ## Recall (read)
 

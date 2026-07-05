@@ -74,3 +74,26 @@ func TestInstructionPathAndLegacyFallback(t *testing.T) {
 		t.Fatalf("legacy file should be left in place: %v", err)
 	}
 }
+
+func TestInstructionTemplateExplainsFactShape(t *testing.T) {
+	dir := t.TempDir()
+	if err := Scaffold(dir); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "INSTRUCTION.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(b)
+	for _, want := range []string{
+		"Standard `self/**/*.md` fact shape",
+		"The `rough:` field is the ONLY rough value",
+		"Everything after the closing `---` is the full private fact body",
+		"There is no `no:` field inside a fact",
+		"Peer note at `peers/kordi-pedro/team.md`",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("INSTRUCTION.md should contain %q", want)
+		}
+	}
+}
