@@ -1,6 +1,6 @@
 # doss
 
-**[Documentation](https://doss-docs-shenzhe-zhus-projects.vercel.app)** · [How it works](docs/how-it-works.md)
+**[Documentation](https://doss-docs-shenzhe-zhus-projects.vercel.app)**
 
 > A synced memory folder your agents read and write as plain files — with rules, in a file, for what may leave.
 > Your agent's memory, your rules.
