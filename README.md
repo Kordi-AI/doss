@@ -71,4 +71,3 @@ After setup, an agent only needs four habits (details in the generated `~/.doss/
 ## Docs
 
 - [Documentation site](https://doss-docs-shenzhe-zhus-projects.vercel.app) — Overview, Getting started, Concepts, Commands, How it works
-- [How it works](docs/how-it-works.md) — the detailed mechanics in-repo: commands, hooks, wiring, sync, failure modes
