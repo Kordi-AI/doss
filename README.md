@@ -1,6 +1,6 @@
 # doss
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Kordi-AI/doss)
+**[Documentation](https://doss-docs-shenzhe-zhus-projects.vercel.app)** · [How it works](docs/how-it-works.md)
 
 > A synced memory folder your agents read and write as plain files — with rules, in a file, for what may leave.
 > Your agent's memory, your rules.
@@ -70,5 +70,5 @@ After setup, an agent only needs four habits (details in the generated `~/.doss/
 
 ## Docs
 
-- [Ask DeepWiki](https://deepwiki.com/Kordi-AI/doss) — auto-generated, always-current docs you can ask questions of
-- [How it works](docs/how-it-works.md) — the detailed mechanics: commands, hooks, wiring, sync, failure modes
+- [Documentation site](https://doss-docs-shenzhe-zhus-projects.vercel.app) — Overview, Getting started, Concepts, Commands, How it works
+- [How it works](docs/how-it-works.md) — the detailed mechanics in-repo: commands, hooks, wiring, sync, failure modes
