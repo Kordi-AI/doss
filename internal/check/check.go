@@ -76,7 +76,7 @@ func Vault(dir string) ([]Issue, error) {
 		}
 	}
 
-	for _, area := range []string{"self", "peers"} {
+	for _, area := range []string{"self", "peers", "notes"} {
 		root := filepath.Join(dir, area)
 		lower := map[string]string{} // case-collision detection, per vault area
 		_ = filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
@@ -119,13 +119,13 @@ func Files(dir string, files []string) ([]Issue, error) {
 		switch {
 		case f == "policy.yaml":
 			issues = append(issues, checkPolicy(dir)...)
-		case strings.HasPrefix(f, "self/") || strings.HasPrefix(f, "peers/"):
+		case strings.HasPrefix(f, "self/") || strings.HasPrefix(f, "peers/") || strings.HasPrefix(f, "notes/"):
 			if _, err := os.Stat(filepath.Join(dir, f)); err == nil {
 				issues = append(issues, checkFile(dir, f)...)
 			}
 		case f == filepath.ToSlash(filepath.Join("local", "access.yaml")):
 			issues = append(issues, checkAccess(dir)...)
-		case strings.HasPrefix(f, "notes/"), strings.HasPrefix(f, "local/"),
+		case strings.HasPrefix(f, "local/"),
 			f == "SKILL.md", f == "README.md",
 			f == ".gitignore", f == "ledger.log":
 			// exempt
@@ -147,9 +147,10 @@ func checkFile(dir, rel string) []Issue {
 			Msg: "file name must be lowercase [a-z0-9._-]", Hint: "e.g. dietary.md"})
 	}
 	ext := filepath.Ext(base)
-	if ext != ".md" && ext != ".yaml" && ext != ".yml" {
+	if ext != ".md" {
 		issues = append(issues, Issue{File: rel, Code: "E_EXT",
-			Msg: "unsupported file type " + ext, Hint: "use .md (or .yaml for pure data)"})
+			Msg:  "content files must be markdown",
+			Hint: "use .md under self/, peers/, and notes/; YAML is only for policy.yaml and local/access.yaml"})
 		return issues
 	}
 
@@ -161,15 +162,6 @@ func checkFile(dir, rel string) []Issue {
 		issues = append(issues, Issue{File: rel, Code: "E_SIZE",
 			Msg:  fmt.Sprintf("file is %dKB (limit 128KB)", len(b)/1024),
 			Hint: "split by topic — one topic per file"})
-	}
-
-	if ext == ".yaml" || ext == ".yml" {
-		var v any
-		if err := yaml.Unmarshal(b, &v); err != nil {
-			issues = append(issues, Issue{File: rel, Line: yamlLine(err), Code: "E_YAML",
-				Msg: "invalid YAML: " + yamlMsg(err)})
-		}
-		return issues
 	}
 
 	fm, body, ok := splitFrontmatter(b)

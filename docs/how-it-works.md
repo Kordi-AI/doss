@@ -19,15 +19,15 @@ One binary (`doss`), git underneath, no database, no server.
 ~/.doss/
   self/          # facts about the owner; the path IS the topic: self/profile/dietary.md
   peers/         # what other people shared with you
-  notes/         # scratch; never validated, never shared
-  policy.yaml    # disclosure rules (default: nothing leaves)
+  notes/         # markdown scratch; never shared
+  policy.yaml    # synced owner-info disclosure rules (default: nothing leaves)
   local/access.yaml
-                 # device-local delegation rules; gitignored, never synced
+                 # device-local file/task delegation rules; gitignored, never synced
   ledger/        # who was told what — one append-only file per device
   SKILL.md       # the one-pager agents follow
 ```
 
-A fact file is markdown with YAML frontmatter. Every `self/**/*.md` fact must include a non-empty `rough` value so rough-level disclosure never requires model guessing. Other fields are optional; git records time:
+Content under `self/`, `peers/`, and `notes/` is Markdown. YAML is reserved for configuration files such as `policy.yaml` and `local/access.yaml`. A fact file is Markdown with YAML frontmatter; every `self/**/*.md` fact must include a non-empty `rough` value so rough-level disclosure never requires model guessing. Other fields are optional; git records time:
 
 | Field | Values | Meaning |
 | --- | --- | --- |
@@ -134,11 +134,24 @@ The rules the agent follows:
 - `peers/` and `notes/` never leave.
 - After disclosing, the agent records it: `doss log --record --to <who> --shared <topic>`. The ledger (one append-only file per device under `ledger/`, merged by `doss log`) is the owner's "who knows what about me". It records; it is not the disclosure gate.
 
+`doss log` is only the after-the-fact ledger. It does not decide whether a fact may leave, and a log entry is never permission. The sequence is: verify the requester, apply `policy.yaml`, answer only what is allowed, then log what was disclosed.
+
 Honest bounds:
 
 - **This is discipline, not a wall, when the agent has raw vault access.** An agent that can `grep` the vault could bypass the rules. The hard guarantee only holds when the outward-facing agent has NO raw access and reaches owner info solely through a serving layer that applies the policy — a deployment choice (e.g. a hosted front desk), not something a local command can enforce.
 - **The ledger is best-effort.** A disciplined agent records disclosures; a forgetful one leaves gaps. It's an honest audit aid, not a tamper-proof log.
 - **Default-deny limits the blast radius.** The safe direction is baked in: unknown requester, unlisted folder, or forgotten rule all resolve to "share nothing".
+
+## Local Access Is Different
+
+`policy.yaml` and `local/access.yaml` answer different questions:
+
+| File | Syncs? | Scope | Levels | Question it answers |
+| --- | --- | --- | --- | --- |
+| `policy.yaml` | yes | owner memory under `self/` | `no` / `rough` / `full` | "What owner info may this requester receive?" |
+| `local/access.yaml` | no, gitignored | this device's folders | `no` / `read` / `full` | "What local files may this requester ask this machine to read, edit, or run?" |
+
+They do not grant each other. `policy.yaml` never grants permission to edit a local project, and `local/access.yaml` never grants permission to disclose owner facts from `self/`.
 
 ## Sync and the cloud copy
 
@@ -163,6 +176,7 @@ Deleting the local vault never touches the cloud copy. The `doss` binary stays i
 `doss tidy` prints what machines can flag but only judgment can resolve:
 
 - check problems (these also block disclosure)
+- self facts missing `rough` values
 - files untouched for 180+ days
 - `status: suggested` facts waiting for confirmation
 - a bloated `notes/`

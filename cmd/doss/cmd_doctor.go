@@ -84,7 +84,7 @@ func cmdDoctor(args []string) error {
 	printWiring(&problems, fix)
 
 	// Tidy hints (same logic as `doss tidy`; staleness is informational only).
-	d := gatherDirt(vd, len(issues))
+	d := gatherDirt(vd, issues)
 	staleNote := ""
 	if len(d.stale) > 0 {
 		staleNote = fmt.Sprintf(" · %d possibly out of date", len(d.stale))

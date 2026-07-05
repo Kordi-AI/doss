@@ -210,9 +210,9 @@ ask the owner what identity their memory vault should commit as, then rerun:
 
 	abs, _ := filepath.Abs(d)
 	fmt.Printf(`✓ vault ready: %s
-  self/         facts about the owner (path = topic)
-  peers/        what others shared with you
-  notes/        scratch — never leaves this machine
+  self/         Markdown facts about the owner (path = topic)
+  peers/        Markdown notes others shared with you
+  notes/        Markdown scratch — never leaves this machine
   policy.yaml   disclosure rules (default: nothing leaves)
 
 cloud sync: %s

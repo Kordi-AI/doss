@@ -15,17 +15,18 @@ import (
 
 // dirt is everything machines can flag but only judgment can resolve.
 type dirt struct {
-	checkIssues int
-	stale       []string // possibly out of date (git-time based); informational, not an alarm
-	suggested   []string // unconfirmed guesses waiting for the owner
-	notes       int
+	checkIssues  int
+	missingRough []string // self facts missing a usable rough disclosure value
+	stale        []string // possibly out of date (git-time based); informational, not an alarm
+	suggested    []string // unconfirmed guesses waiting for the owner
+	notes        int
 }
 
 // due decides whether to nudge. Staleness is deliberately NOT here: a fact
 // going old over time isn't a mess to clean, just something to re-confirm
 // when it's actually used — so it never triggers the alarm on its own.
 func (d dirt) due() bool {
-	return d.checkIssues > 0 || len(d.suggested) >= 5 || d.notes >= 50
+	return d.checkIssues > 0 || len(d.missingRough) > 0 || len(d.suggested) >= 5 || d.notes >= 50
 }
 
 // nudge is the plain-language, specific one-liner shown after a passing check.
@@ -34,6 +35,10 @@ func (d dirt) nudge() string {
 	var parts []string
 	if d.checkIssues > 0 {
 		parts = append(parts, fmt.Sprintf("%d check problem(s) to fix", d.checkIssues))
+	}
+	if len(d.missingRough) > 0 {
+		parts = append(parts, fmt.Sprintf("%d self fact(s) need rough values (%s) — add owner-written rough frontmatter",
+			len(d.missingRough), topicList(d.missingRough, 3)))
 	}
 	if len(d.suggested) >= 5 {
 		parts = append(parts, fmt.Sprintf("%d guesses still unconfirmed (%s) — confirm or drop them",
@@ -48,8 +53,8 @@ func (d dirt) nudge() string {
 	return "tidy: " + strings.Join(parts, "; ") + "  (doss tidy)"
 }
 
-func gatherDirt(dir string, knownIssues int) dirt {
-	d := dirt{checkIssues: knownIssues}
+func gatherDirt(dir string, issues []check.Issue) dirt {
+	d := dirt{checkIssues: len(issues), missingRough: missingRoughFiles(issues)}
 	now := time.Now()
 	for _, area := range []string{"self", "peers"} {
 		root := filepath.Join(dir, area)
@@ -90,6 +95,33 @@ func gatherDirt(dir string, knownIssues int) dirt {
 	return d
 }
 
+func missingRoughFiles(issues []check.Issue) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, is := range issues {
+		if is.Code != "E_ROUGH" || !strings.HasPrefix(filepath.ToSlash(is.File), "self/") {
+			continue
+		}
+		rel := filepath.ToSlash(is.File)
+		if !seen[rel] {
+			seen[rel] = true
+			out = append(out, rel)
+		}
+	}
+	return out
+}
+
+func nonRoughIssues(issues []check.Issue) []check.Issue {
+	var out []check.Issue
+	for _, is := range issues {
+		if is.Code == "E_ROUGH" && strings.HasPrefix(filepath.ToSlash(is.File), "self/") {
+			continue
+		}
+		out = append(out, is)
+	}
+	return out
+}
+
 func cmdTidy(args []string) error {
 	dir, err := vault.MustExist()
 	if err != nil {
@@ -99,15 +131,24 @@ func cmdTidy(args []string) error {
 	if err != nil {
 		return err
 	}
-	d := gatherDirt(dir, len(issues))
+	d := gatherDirt(dir, issues)
 
 	shown := false
-	if d.checkIssues > 0 {
+	if other := nonRoughIssues(issues); len(other) > 0 {
 		shown = true
 		fmt.Println("Fix first (these block disclosure):")
-		for _, is := range issues {
+		for _, is := range other {
 			fmt.Println("  " + is.String())
 		}
+		fmt.Println()
+	}
+	if len(d.missingRough) > 0 {
+		shown = true
+		fmt.Println("Missing rough values (these block rough-level disclosure):")
+		for _, f := range capList(topicsOf(d.missingRough), 10) {
+			fmt.Println("  " + f)
+		}
+		fmt.Println("  add frontmatter like: rough: \"Toronto\"")
 		fmt.Println()
 	}
 	if len(d.suggested) > 0 {

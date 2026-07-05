@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"github.com/Kordi-AI/doss/internal/check"
+)
 
 func TestTopicOf(t *testing.T) {
 	cases := map[string]string{
@@ -34,6 +39,26 @@ func TestDirtDue(t *testing.T) {
 	// staleness alone must NOT trigger the alarm (design decision)
 	if (dirt{stale: make([]string, 100)}).due() {
 		t.Error("staleness alone must not be due")
+	}
+}
+
+func TestMissingRoughNudge(t *testing.T) {
+	issues := []check.Issue{
+		{File: "self/profile/address.md", Code: "E_ROUGH"},
+		{File: "self/profile/address.md", Code: "E_ROUGH"},
+		{File: "self/work/style.md", Code: "E_ROUGH"},
+		{File: "self/profile/bad.md", Code: "E_EMPTY"},
+	}
+	missing := missingRoughFiles(issues)
+	if len(missing) != 2 {
+		t.Fatalf("missingRoughFiles should dedupe rough issues, got %v", missing)
+	}
+	nudge := (dirt{checkIssues: len(issues), missingRough: missing}).nudge()
+	if !strings.Contains(nudge, "self fact(s) need rough values") {
+		t.Fatalf("nudge should call out missing rough values, got %q", nudge)
+	}
+	if others := nonRoughIssues(issues); len(others) != 1 || others[0].Code != "E_EMPTY" {
+		t.Fatalf("nonRoughIssues should keep only non-rough issues, got %v", others)
 	}
 }
 

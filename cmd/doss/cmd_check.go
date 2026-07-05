@@ -51,7 +51,7 @@ func cmdCheck(args []string) error {
 		}
 		// The dirt-threshold nudge: maintenance piggybacks on a moment
 		// the agent is already awake, like allocation-triggered GC.
-		if d := gatherDirt(dv, 0); d.due() {
+		if d := gatherDirt(dv, nil); d.due() {
 			fmt.Println(d.nudge())
 		}
 		return nil

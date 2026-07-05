@@ -79,7 +79,7 @@ func hookStop() error {
 	// Session end is the least-noisy moment to surface maintenance, so the
 	// tidy nudge piggybacks here (once per session) even when nothing changed.
 	defer func() {
-		if n := gatherDirt(d, 0); n.due() {
+		if n := gatherDirt(d, nil); n.due() {
 			fmt.Fprintln(os.Stderr, n.nudge())
 		}
 	}()
@@ -121,7 +121,12 @@ func hookStop() error {
 				return nil
 			}
 		}
-		_, _ = gitx.Run(d, pushArgs...)
+		if out, err := gitx.Run(d, pushArgs...); err != nil {
+			fmt.Fprintln(os.Stderr, "doss: committed locally; push failed — run `doss sync` later")
+			if msg := strings.TrimSpace(out); msg != "" {
+				fmt.Fprintln(os.Stderr, "git said: "+msg)
+			}
+		}
 	}
 	return nil
 }

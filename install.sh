@@ -10,6 +10,12 @@ BIN_DIR="${DOSS_BIN_DIR:-$HOME/.local/bin}"
 
 need() { command -v "$1" >/dev/null 2>&1; }
 
+latest_release_tag() {
+  git ls-remote --tags --refs --sort='v:refname' "https://github.com/$REPO" 2>/dev/null |
+    sed 's#.*refs/tags/##' |
+    tail -n 1
+}
+
 detect() {
   os=$(uname -s); arch=$(uname -m)
   case "$os" in
@@ -30,11 +36,18 @@ build_from_source() {
   need go  || { echo "no prebuilt binary for your platform, and Go isn't installed to build from source." >&2
                 echo "  macOS: brew install go   linux: https://go.dev/dl/" >&2; exit 1; }
   tmp=$(mktemp -d)
-  echo "building doss from source..."
   if [ -f "./cmd/doss/main.go" ]; then
+    echo "building doss from local source..."
     go build -o "$tmp/doss" ./cmd/doss
   else
-    git clone --depth 1 "https://github.com/$REPO" "$tmp/src" >/dev/null 2>&1
+    tag=$(latest_release_tag)
+    if [ -n "$tag" ]; then
+      echo "building doss from source at $tag..."
+      git clone --depth 1 --branch "$tag" "https://github.com/$REPO" "$tmp/src" >/dev/null 2>&1
+    else
+      echo "could not find the latest release tag — falling back to the default branch" >&2
+      git clone --depth 1 "https://github.com/$REPO" "$tmp/src" >/dev/null 2>&1
+    fi
     ( cd "$tmp/src" && go build -o "$tmp/doss" ./cmd/doss )
   fi
   mkdir -p "$BIN_DIR"; mv "$tmp/doss" "$BIN_DIR/doss"; rm -rf "$tmp"

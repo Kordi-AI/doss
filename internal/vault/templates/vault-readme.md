@@ -2,9 +2,9 @@
 
 Private memory vault managed with [Doss](https://github.com/Kordi-AI/doss).
 
-- `self/` — facts about me (path = topic)
-- `peers/` — what others shared with me
-- `notes/` — scratch; never leaves this machine
+- `self/` — Markdown facts about me (path = topic)
+- `peers/` — Markdown notes others shared with me
+- `notes/` — Markdown scratch; never leaves this machine
 - `policy.yaml` — disclosure rules (default: nothing leaves)
 
 This repo is private. Keep it that way.

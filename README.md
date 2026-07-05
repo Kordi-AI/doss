@@ -16,11 +16,11 @@ wiring, and policy-backed disclosure controls and logs.
 
 | Concern | Where it lives | What it does |
 | --- | --- | --- |
-| Preference vault | `~/.doss/self/`, `peers/`, `notes/` | Stores long-term preferences, facts, and notes as markdown/yaml files. |
+| Preference vault | `~/.doss/self/`, `peers/`, `notes/` | Stores long-term preferences, facts, and notes as Markdown files. |
 | Agent rules | `~/.doss/SKILL.md` | Tells agents how to read, write, check, sync, and disclose. |
 | Disclosure policy | `~/.doss/policy.yaml` | Maps groups of people to `full`, `rough`, or `no` disclosure for owner topics. Default: deny. |
-| Local access policy | `~/.doss/local/access.yaml` | Device-local rules for what non-owners may ask this machine to read or edit. |
-| Audit ledger | `doss log` | Records who was told what about the owner. |
+| Local access policy | `~/.doss/local/access.yaml` | Gitignored, device-local rules for non-owner tasks on this machine's files. |
+| Audit ledger | `doss log` | Records who was told what; it does not authorize disclosure. |
 | Sync | `doss sync` | Validates, commits, pulls, and pushes the vault. |
 
 ## Quick Start

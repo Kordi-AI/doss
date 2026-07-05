@@ -128,6 +128,22 @@ func TestSelfMarkdownRequiresRough(t *testing.T) {
 	}
 }
 
+func TestContentFactsMustBeMarkdown(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "policy.yaml"), "groups: {}\ncan-see: {}\n")
+	write(t, filepath.Join(dir, "self", "profile", "raw.yaml"), "city: Toronto\n")
+	write(t, filepath.Join(dir, "peers", "kordi-pedro", "team.yaml"), "style: async\n")
+	write(t, filepath.Join(dir, "notes", "scratch.yaml"), "todo: later\n")
+
+	issues, err := Vault(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasCode(issues, "E_EXT") {
+		t.Fatalf("self/peers/notes YAML content should fail with E_EXT, got %v", issues)
+	}
+}
+
 func TestCheckPolicy(t *testing.T) {
 	dir := t.TempDir()
 	write(t, filepath.Join(dir, "policy.yaml"),
