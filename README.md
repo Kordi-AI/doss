@@ -40,9 +40,6 @@ Please install Doss and set up my memory vault:
 4. Read `~/.doss/SKILL.md` and manage my memory by its rules from now on.
 ```
 
-`doss init` is a guided setup. Prebuilt binaries are available for macOS/Linux on
-amd64 and arm64.
-
 ## Agent Workflow
 
 After setup, agents operate on the vault as normal files:
