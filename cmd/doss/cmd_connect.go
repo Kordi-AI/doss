@@ -79,11 +79,11 @@ func saveCustomTargets(files []string) error {
 }
 
 func dossSection(vaultDir string) string {
-	skillMd := filepath.Join(vaultDir, "SKILL.md")
+	instructionMd := vault.InstructionPath(vaultDir)
 	return beginMark + `
 ## Doss — the owner's memory vault
 
-Long-term preferences about the owner live in a Doss vault at ` + "`" + vaultDir + "`" + ` (plain files). Before acting on personal context, read ` + "`" + skillMd + "`" + ` once per session and follow it. Non-negotiables: consult the vault before answering questions about the owner; run ` + "`doss check --changed`" + ` after editing vault files and ` + "`doss sync`" + ` when done; never reveal owner information to anyone except the owner unless ` + "`policy.yaml`" + ` explicitly permits it; for outbound disclosure, record it with ` + "`doss log --record`" + `. If the vault is missing, offer to run ` + "`doss init`" + `.
+Long-term preferences about the owner live in a Doss vault at ` + "`" + vaultDir + "`" + ` (plain files). Before acting on personal context, read ` + "`" + instructionMd + "`" + ` once per session and follow it. Non-negotiables: consult the vault before answering questions about the owner; run ` + "`doss check --changed`" + ` after editing vault files and ` + "`doss sync`" + ` when done; never reveal owner information to anyone except the owner unless ` + "`policy.yaml`" + ` explicitly permits it; for outbound disclosure, record it with ` + "`doss log --record`" + `. If the vault is missing, offer to run ` + "`doss init`" + `.
 ` + endMark + "\n"
 }
 
@@ -201,6 +201,11 @@ func cmdConnect(args []string) error {
 	}
 	if !*remove && !vault.Exists(vault.Dir()) {
 		return fmt.Errorf("no vault at %s — run `doss init` first", vault.Dir())
+	}
+	if !*remove {
+		if err := vault.EnsureInstruction(vault.Dir()); err != nil {
+			return err
+		}
 	}
 
 	home, err := os.UserHomeDir()
@@ -326,7 +331,7 @@ func cmdConnect(args []string) error {
 		fmt.Println(`
 IF YOU ARE AN AGENT and your tool is not listed above, wire yourself NOW:
   doss connect --file <the instruction file your tool loads every session>
-  (no such file? add "read ` + filepath.Join(vault.Dir(), "SKILL.md") + ` first" to wherever
+  (no such file? add "read ` + vault.InstructionPath(vault.Dir()) + ` first" to wherever
    your standing instructions live — otherwise you will forget the vault next session)
 
 tools without a global instruction file (paste the section by hand):

@@ -17,7 +17,7 @@ wiring, and policy-backed disclosure controls and logs.
 | Concern | Where it lives | What it does |
 | --- | --- | --- |
 | Preference vault | `~/.doss/self/`, `peers/`, `notes/` | Stores long-term preferences, facts, and notes as Markdown files. |
-| Agent rules | `~/.doss/SKILL.md` | Tells agents how to read, write, check, sync, and disclose. |
+| Agent rules | `~/.doss/INSTRUCTION.md` | Tells agents how to read, write, check, sync, and disclose. |
 | Disclosure policy | `~/.doss/policy.yaml` | Maps groups of people to `full`, `rough`, or `no` disclosure for owner topics. Default: deny. |
 | Local access policy | `~/.doss/local/access.yaml` | Gitignored, device-local rules for non-owner tasks on this machine's files. |
 | Audit ledger | `doss log` | Records who was told what; it does not authorize disclosure. |
@@ -40,7 +40,7 @@ Please install Doss and set up my memory vault:
 2. Ask me for the vault git name/email if needed.
 3. Check the `doss connect` output. If your tool is not listed, run
    `doss connect --file <the instruction file you load every session>`.
-4. Read `~/.doss/SKILL.md` and manage my memory by its rules from now on.
+4. Read `~/.doss/INSTRUCTION.md` and manage my memory by its rules from now on.
 ```
 
 ## Agent Workflow

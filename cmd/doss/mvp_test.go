@@ -136,4 +136,7 @@ func TestDossSectionDoesNotMentionAnswerCommand(t *testing.T) {
 	if !strings.Contains(section, "unless `policy.yaml` explicitly permits it") {
 		t.Fatalf("managed section should allow only policy-permitted outbound disclosure:\n%s", section)
 	}
+	if !strings.Contains(section, "INSTRUCTION.md") || strings.Contains(section, "SKILL.md") {
+		t.Fatalf("managed section should point agents at INSTRUCTION.md:\n%s", section)
+	}
 }

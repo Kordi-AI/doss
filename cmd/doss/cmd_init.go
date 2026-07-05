@@ -142,6 +142,9 @@ ask the owner what identity their memory vault should commit as, then rerun:
 		if err := vault.EnsureLocal(d); err != nil {
 			return err
 		}
+		if err := vault.EnsureInstruction(d); err != nil {
+			return err
+		}
 		if _, err := gitx.Run(d, "config", "user.name", name); err != nil {
 			return err
 		}
@@ -149,7 +152,7 @@ ask the owner what identity their memory vault should commit as, then rerun:
 			return err
 		}
 		abs, _ := filepath.Abs(d)
-		fmt.Printf("✓ vault attached: %s\n  cloud copy: %s\n  this device now shares the same memory — `doss sync` keeps them aligned\n  have your agent read %s\n", abs, attachRef, filepath.Join(abs, "SKILL.md"))
+		fmt.Printf("✓ vault attached: %s\n  cloud copy: %s\n  this device now shares the same memory — `doss sync` keeps them aligned\n  have your agent read %s\n", abs, attachRef, vault.InstructionPath(abs))
 		return maybeConnect(*noConnect)
 	}
 
@@ -214,13 +217,14 @@ ask the owner what identity their memory vault should commit as, then rerun:
   peers/        Markdown notes others shared with you
   notes/        Markdown scratch — never leaves this machine
   policy.yaml   disclosure rules (default: nothing leaves)
+  INSTRUCTION.md agent rules for this vault
 
 cloud sync: %s
 
 next steps:
   1. have your agent read %s
   2. edit memory freely; run "doss check --changed" after edits, "doss sync" when done
-`, abs, cloud, filepath.Join(abs, "SKILL.md"))
+`, abs, cloud, vault.InstructionPath(abs))
 
 	if cloud == "local only" {
 		fmt.Println(`  3. add cloud sync anytime:

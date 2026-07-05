@@ -12,6 +12,11 @@ import (
 //go:embed templates
 var tmpl embed.FS
 
+const (
+	InstructionFile       = "INSTRUCTION.md"
+	LegacyInstructionFile = "SKILL.md"
+)
+
 // Dir returns the vault directory: $DOSS_HOME or ~/.doss.
 func Dir() string {
 	if d := os.Getenv("DOSS_HOME"); d != "" {
@@ -44,6 +49,32 @@ func MustExist() (string, error) {
 	return d, nil
 }
 
+// InstructionPath returns the agent instruction file to reference. New vaults
+// use INSTRUCTION.md; older vaults that only have SKILL.md remain readable.
+func InstructionPath(dir string) string {
+	if _, err := os.Stat(filepath.Join(dir, InstructionFile)); err == nil {
+		return filepath.Join(dir, InstructionFile)
+	}
+	if _, err := os.Stat(filepath.Join(dir, LegacyInstructionFile)); err == nil {
+		return filepath.Join(dir, LegacyInstructionFile)
+	}
+	return filepath.Join(dir, InstructionFile)
+}
+
+// EnsureInstruction seeds the current primary instruction file for vaults
+// created before INSTRUCTION.md existed.
+func EnsureInstruction(dir string) error {
+	path := filepath.Join(dir, InstructionFile)
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+	b, err := fs.ReadFile(tmpl, "templates/INSTRUCTION.md")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, b, 0o644)
+}
+
 // Scaffold creates the vault layout. It never overwrites existing files.
 func Scaffold(dir string) error {
 	for _, sub := range []string{"self", "peers", "notes"} {
@@ -58,10 +89,10 @@ func Scaffold(dir string) error {
 		}
 	}
 	files := map[string]string{
-		"SKILL.md":    "templates/SKILL.md",
-		"policy.yaml": "templates/policy.yaml",
-		"README.md":   "templates/vault-readme.md",
-		".gitignore":  "templates/vault-gitignore",
+		InstructionFile: "templates/INSTRUCTION.md",
+		"policy.yaml":   "templates/policy.yaml",
+		"README.md":     "templates/vault-readme.md",
+		".gitignore":    "templates/vault-gitignore",
 	}
 	for dst, src := range files {
 		path := filepath.Join(dir, dst)

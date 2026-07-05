@@ -24,7 +24,7 @@ func TestScaffoldAndExists(t *testing.T) {
 	}
 	for _, f := range []string{
 		"self", "peers", "notes",
-		"policy.yaml", "SKILL.md", "README.md", ".gitignore",
+		"policy.yaml", "INSTRUCTION.md", "README.md", ".gitignore",
 		filepath.Join("local", "access.yaml"),
 	} {
 		if _, err := os.Stat(filepath.Join(dir, f)); err != nil {
@@ -48,5 +48,29 @@ func TestScaffoldAndExists(t *testing.T) {
 	}
 	if !found {
 		t.Error("vault .gitignore does not exclude local/")
+	}
+}
+
+func TestInstructionPathAndLegacyFallback(t *testing.T) {
+	dir := t.TempDir()
+	if got := InstructionPath(dir); got != filepath.Join(dir, "INSTRUCTION.md") {
+		t.Fatalf("empty vault instruction path = %q", got)
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("legacy\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := InstructionPath(dir); got != filepath.Join(dir, "SKILL.md") {
+		t.Fatalf("legacy instruction path = %q", got)
+	}
+
+	if err := EnsureInstruction(dir); err != nil {
+		t.Fatal(err)
+	}
+	if got := InstructionPath(dir); got != filepath.Join(dir, "INSTRUCTION.md") {
+		t.Fatalf("primary instruction path = %q", got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "SKILL.md")); err != nil {
+		t.Fatalf("legacy file should be left in place: %v", err)
 	}
 }

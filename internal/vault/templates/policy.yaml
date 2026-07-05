@@ -21,3 +21,4 @@ can-see:
 #   no    = say nothing (also the default)
 #   rough = share only the fact's rough: value
 #   full  = share the full fact body
+# If someone belongs to several groups, use the highest level: no < rough < full.

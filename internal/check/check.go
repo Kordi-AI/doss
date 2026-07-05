@@ -43,7 +43,7 @@ var (
 
 	rootAllowed = map[string]bool{
 		"self": true, "peers": true, "notes": true,
-		"policy.yaml": true, "SKILL.md": true, "README.md": true,
+		"policy.yaml": true, "INSTRUCTION.md": true, "SKILL.md": true, "README.md": true,
 		"ledger": true, "ledger.log": true, "local": true, ".git": true, ".gitignore": true, ".index": true,
 	}
 	allowedKeys = map[string]bool{
@@ -126,7 +126,7 @@ func Files(dir string, files []string) ([]Issue, error) {
 		case f == filepath.ToSlash(filepath.Join("local", "access.yaml")):
 			issues = append(issues, checkAccess(dir)...)
 		case strings.HasPrefix(f, "local/"),
-			f == "SKILL.md", f == "README.md",
+			f == "INSTRUCTION.md", f == "SKILL.md", f == "README.md",
 			f == ".gitignore", f == "ledger.log":
 			// exempt
 		default:

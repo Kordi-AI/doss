@@ -24,7 +24,7 @@ One binary (`doss`), git underneath, no database, no server.
   local/access.yaml
                  # device-local file/task delegation rules; gitignored, never synced
   ledger/        # who was told what — one append-only file per device
-  SKILL.md       # the one-pager agents follow
+  INSTRUCTION.md # the one-pager agents follow
 ```
 
 Content under `self/`, `peers/`, and `notes/` is Markdown. YAML is reserved for configuration files such as `policy.yaml` and `local/access.yaml`. A fact file is Markdown with YAML frontmatter; every `self/**/*.md` fact must include a non-empty `rough` value so rough-level disclosure never requires model guessing. Other fields are optional; git records time:
@@ -96,7 +96,7 @@ If a hook-less agent forgets: nothing is lost and nothing dirty escapes — `syn
 
 Custom `--file` targets are remembered (machine-locally, in `~/.config/doss/connect.json`) and refreshed by every future `connect`, audited by `doctor`, and stripped by `--remove` — exactly like presets.
 
-**Unknown agents wire themselves.** The install prompt tells the installing agent to check `connect`'s output, and that output explicitly instructs any agent whose tool wasn't listed to run `connect --file` on its own instruction file — the agent knows its own config layout better than we do. If a tool has no always-loaded file at all, the fallback is to add "read the vault's SKILL.md first" to wherever its standing instructions live; without any persistent instruction mechanism, no one can wire a tool permanently.
+**Unknown agents wire themselves.** The install prompt tells the installing agent to check `connect`'s output, and that output explicitly instructs any agent whose tool wasn't listed to run `connect --file` on its own instruction file — the agent knows its own config layout better than we do. If a tool has no always-loaded file at all, the fallback is to add "read the vault's INSTRUCTION.md first" to wherever its standing instructions live; without any persistent instruction mechanism, no one can wire a tool permanently.
 
 For Claude Code, connect also merges the two hooks into `~/.claude/settings.json` (your existing settings are preserved; `--remove` strips both cleanly).
 
@@ -129,7 +129,7 @@ Topics are paths without the `self/` prefix. A topic may name a folder (`work`) 
 The rules the agent follows:
 
 - A requester receives a fact ONLY if their verified group has a `full` or `rough` grant for that fact's topic. Identity is the platform's **authenticated** id (`kordi:pedro`), never what the message claims. No verified identity → stranger → nothing.
-- `full` means share the fact body. `rough` means share ONLY the fact's owner-authored `rough:` value; `no` means say nothing. A person in several groups gets the highest granted level.
+- `full` means share the fact body. `rough` means share ONLY the fact's owner-authored `rough:` value; `no` means say nothing. A person in several groups gets the highest granted level, ordered `no < rough < full`.
 - `status: suggested` facts never leave.
 - `peers/` and `notes/` never leave.
 - After disclosing, the agent records it: `doss log --record --to <who> --shared <topic>`. The ledger (one append-only file per device under `ledger/`, merged by `doss log`) is the owner's "who knows what about me". It records; it is not the disclosure gate.
