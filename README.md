@@ -1,6 +1,6 @@
 # doss
 
-[![Documentation](https://img.shields.io/badge/Documentation-doss-000?style=flat&logo=vercel&logoColor=white)](https://doss-docs-shenzhe-zhus-projects.vercel.app)
+[![Documentation](https://img.shields.io/badge/Documentation-doss-000?style=flat&logo=vercel&logoColor=white)](https://doss-docs-git-doss-docs-shenzhe-zhus-projects.vercel.app)
 
 > A synced memory folder your agents read and write as plain files — with rules, in a file, for what may leave.
 > Your agent's memory, your rules.
@@ -70,4 +70,4 @@ After setup, an agent only needs four habits (details in the generated `~/.doss/
 
 ## Docs
 
-- [Documentation site](https://doss-docs-shenzhe-zhus-projects.vercel.app) — Overview, Getting started, Concepts, Commands, How it works
+- [Documentation site](https://doss-docs-git-doss-docs-shenzhe-zhus-projects.vercel.app) — Overview, Getting started, Concepts, Commands, How it works
