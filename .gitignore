@@ -3,3 +3,6 @@
 dist/
 *.test
 .scratch/
+
+# internal design docs — local only, never public
+docs/design/
