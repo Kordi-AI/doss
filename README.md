@@ -22,23 +22,26 @@ wiring, and disclosure logs.
 
 ## Quick Start
 
+**For people**
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/Kordi-AI/doss/main/install.sh | sh
 doss init
 ```
 
-`doss init` walks through a new vault or an existing cloud vault, commit identity,
-optional private GitHub backup, and agent wiring.
+**For agents**
 
-Common shortcuts:
-
-```sh
-doss init --github              # create a private GitHub-backed vault
-doss init --from owner/repo     # attach this device to an existing vault
-doss doctor                     # check vault health, sync, and agent wiring
+```text
+Please install Doss and set up my memory vault:
+1. Install https://github.com/Kordi-AI/doss, then run `doss init`.
+2. Ask me for the vault git name/email if needed.
+3. Check the `doss connect` output. If your tool is not listed, run
+   `doss connect --file <the instruction file you load every session>`.
+4. Read `~/.doss/SKILL.md` and manage my memory by its rules from now on.
 ```
 
-Prebuilt binaries are available for macOS/Linux on amd64 and arm64.
+`doss init` is a guided setup. Prebuilt binaries are available for macOS/Linux on
+amd64 and arm64.
 
 ## Agent Workflow
 
@@ -52,7 +55,7 @@ After setup, agents operate on the vault as normal files:
 | Finished a batch/session | Run `doss sync`. |
 | Disclosed owner info | Run `doss log --record --to <who> --shared <topic>`. |
 
-For agent-assisted install and multi-device setup, see the
+For cloud sync and multi-device setup, see the
 [Getting Started docs](https://doss-docs-git-doss-docs-shenzhe-zhus-projects.vercel.app/getting-started).
 
 ## Commands
