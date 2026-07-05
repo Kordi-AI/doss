@@ -40,8 +40,7 @@ func TestFrontmatter(t *testing.T) {
 		{"bad verify_by", "verify_by: soon", "E_VALUE"},
 		{"good verify_by", "verify_by: 2027-01-02", ""},
 		{"x- extension allowed", "x-custom: anything", ""},
-		{"public_value ok", `public_value: "Toronto"`, ""},
-		{"public_value must be string", "public_value: [Toronto]", "E_VALUE"},
+		{"rough ok", `rough: "Toronto"`, ""},
 		{"rough must be string", "rough: [a, b]", "E_VALUE"},
 	}
 	for _, c := range cases {

@@ -13,6 +13,6 @@ can-see:
   # contacts: [profile]         # contacts see only self/profile/
   # any group or folder not listed here: nothing
 
-# Graded values (e.g. show a city, not a street) aren't set here — put a
-# `public_value:` field on the fact itself, and share that instead of the raw
-# content. Generalization is data you author, not something decided on the fly.
+# Rough values (e.g. show a city, not a street) aren't set here — put a
+# `rough:` field on the fact itself, and share that instead of the raw content.
+# Generalization is data you author, not something decided on the fly.
