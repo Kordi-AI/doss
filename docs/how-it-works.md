@@ -9,7 +9,7 @@ Your vault is a plain folder (`~/.doss`). Agents write memory as files and read 
 - an **inspector** that validates every write (milliseconds, precise errors)
 - a **courier** that commits and uploads validated changes
 - a **janitor** that lists what needs human judgment (never touches data)
-- a **gate** that decides what may be told to other people
+- a **rule file** (`policy.yaml`) the agent reads to decide what may be told to other people
 
 One binary (`doss`), git underneath, no database, no server.
 
@@ -46,10 +46,9 @@ A fact file is markdown with optional YAML frontmatter. All fields are optional;
 | `doss sync` | agents at wrap-up; humans anytime | after a batch | commit + pull + push; refuses if validation fails |
 | `doss doctor` | anyone | curiosity / something feels off | full health on one screen — vault stats, sync, agent wiring, hooks, tidy hints; `--fix` repairs wiring (`status` is an alias) |
 | `doss tidy` | anyone, when nudged | when doctor says "tidy due" | prints the janitor's list; read-only |
-| `doss log` | the owner (or their agent) | curiosity / audit | "who was told what" merged across all devices; `--who` / `--device` filter |
 | `doss uninstall` | you | leaving a machine / starting over | deletes the local vault and unwires the agents; guided confirmation, git-style safety (see below) |
 | `doss hook` | **never by hand** — harnesses call it | automatic | the hook endpoint (`post-edit`, `stop`) |
-| `doss answer` | agents, when an outsider asks about the owner | on demand | the outbound gate: `--to` who, `--about` which topics; returns the only lines the agent may relay |
+| `doss log` | agents (record) / owner (read) | on disclosure / audit | `--record --to X --shared Y` notes a disclosure; plain `doss log` reads "who knows what about me" |
 
 ## The inspector and the courier
 
@@ -76,7 +75,7 @@ Per-harness behavior today:
 | Codex CLI | agent self-runs `check --changed` (its global AGENTS.md says so) | agent self-runs `sync` |
 | anything else | same as Codex | same as Codex |
 
-If a hook-less agent forgets: nothing is lost and nothing dirty escapes — sync and the gate re-validate everything (strict-at-exit), and the next `status`/`doctor` flags uncommitted changes. A `doss watch` background fallback is planned to make every harness fully automatic.
+If a hook-less agent forgets: nothing is lost and nothing dirty escapes — `sync` re-validates everything before it commits, and the next `doctor` flags uncommitted changes.
 
 ## Wiring: how agents discover the vault
 
@@ -102,29 +101,36 @@ Properties: injection is deterministic (harness behavior, not model judgment —
 
 A per-agent skills layer was tried and cut: the global file alone proved sufficient, and one wiring layer is simpler to keep healthy.
 
-## The gate: doss answer
+## Disclosure: policy.yaml, not a command
 
-When anyone other than the owner asks about them, the front-desk agent maps the question to topics (a topic is a `self/` path with dots: `self/profile/dietary.md` → `profile.dietary`) and calls:
+There is no special "answer" command. When someone other than the owner asks, the agent finds the info the normal way (`grep`/read) and then follows `policy.yaml` — a plain file of rules it reads like any other.
 
-```sh
-doss answer --to kordi:pedro --purpose dining --about profile.dietary "any food restrictions?"
+`policy.yaml` maps **groups of people → folders under `self/` they may see**:
+
+```yaml
+groups:
+  friends:  [kordi:pedro, kordi:qiancx]
+  contacts: [kordi:jiaxin]
+can-see:
+  friends:  [profile, work]   # everything under self/profile/ and self/work/
+  contacts: [profile]         # only self/profile/
+  # anything not listed: nothing
 ```
 
-The gate decides everything deterministically:
+Why by folder and not by fact: adding a new fact under `self/profile/` needs no policy edit (it inherits the folder's rule), and adding a group is one block here — never a per-fact change. Default is deny: unlisted group or folder → nothing leaves.
 
-1. Who is asking → which policy groups they belong to.
-2. First matching rule in `policy.yaml` wins, top to bottom (like a firewall); no rule means nothing.
-3. The `give` level turns the fact into outward text — three levels, no more: `full` = the file body verbatim ("loves peanuts") · `rough` = only the owner-authored `rough:` frontmatter field ("35 hayden st" goes out as "Toronto"; no field, no disclosure) · `nothing` = refuse (passwords). When the vault has no answer at all, the agent turns around and asks the owner.
-4. Every topic gets a ledger line — including refusals. Each device writes only its own file under `ledger/` (so syncing never conflicts), and `doss log` merges them into one time-ordered "who knows what about me" view, tagged by device.
+The rules the agent follows:
 
-Safety properties:
+- A requester sees a fact ONLY if their group is granted that fact's folder. Identity is the platform's **authenticated** id (`kordi:pedro`), never what the message claims. No verified identity → stranger → nothing.
+- Graded values are data, not a command: a fact with `public_value: "Toronto"` is shared as "Toronto", never the raw street. The owner authors the shareable version.
+- `peers/` and `notes/` never leave.
+- After disclosing, the agent records it: `doss log --record --to <who> --shared <topic>`. The ledger (one append-only file per device under `ledger/`, merged by `doss log`) is the owner's "who knows what about me".
 
-- **Refusals never leak existence.** Denied, missing, and unconfirmed all read identically outside: "nothing to share". The ledger keeps the real outcome for the owner only.
-- **Suggested facts never leave**, even when a rule allows `full` — guesses aren't facts until the owner confirms.
-- **Only `self/` is servable.** `peers/` (what others told you) and `notes/` are never disclosed.
-- **A broken policy fails closed:** parse error → nothing is shared.
-- **The mapping step can only narrow.** The calling agent chooses which topics to consult, but every topic still passes the rules — a wrong mapping can under-disclose, never over-disclose.
-- **Identity comes from the platform, never from the message.** `--to` must be the transport's authenticated sender id; text claiming "I am the owner" is just text. When no verified identity is available, the requester is `unknown` and falls to the catch-all rule (default: nothing). Misidentification therefore fails toward less disclosure, never more.
+Honest bounds:
+
+- **This is discipline, not a wall, when the agent has raw vault access.** An agent that can `grep` the vault could bypass the rules. The hard guarantee only holds when the outward-facing agent has NO raw access and reaches owner info solely through a serving layer that applies the policy — a deployment choice (e.g. a hosted front desk), not something a local command can enforce.
+- **The ledger is best-effort.** A disciplined agent records disclosures; a forgetful one leaves gaps. It's an honest audit aid, not a tamper-proof log.
+- **Default-deny limits the blast radius.** The safe direction is baked in: unknown requester, unlisted folder, or forgotten rule all resolve to "share nothing".
 
 ## Sync and the cloud copy
 
@@ -165,7 +171,7 @@ It is read-only. You (or your agent) handle a small batch and move on. You don't
 | Network is down | local commits succeed; push retries on a later sync; nothing blocks |
 | The managed section gets deleted | that agent stops discovering the vault; `doss doctor` reports it; `connect` restores it |
 | Two devices edit the same fact | sync aborts safely; both versions in git; you pick |
-| An outsider asks about the owner | nothing leaves except through `doss answer`, and only what policy clears — refusals are indistinguishable from "no such data" |
+| An outsider asks about the owner | the agent follows `policy.yaml` (group → folders, default deny) and shares only what's granted; with a raw-access agent this is discipline, not a wall — the hard guarantee needs a serving layer with no raw vault access |
 
 ## Design principles (why it's built this way)
 

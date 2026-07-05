@@ -9,7 +9,7 @@ import (
 var version = "0.1.0-dev"
 
 func usage() {
-	fmt.Print(`doss — a synced memory folder + a disclosure gate
+	fmt.Print(`doss — a synced memory folder your agents read and write as plain files
 
 usage: doss <command> [flags]
 
@@ -21,8 +21,7 @@ usage: doss <command> [flags]
   tidy     dirt report: stale facts, unconfirmed guesses, notes backlog
   uninstall  delete the local vault and unwire agents (safe when a cloud copy exists)
   hook     harness hook endpoint (post-edit, stop) — wired by connect
-  answer   the outbound gate: what may be told to whom (--to, --about)
-  log      the ledger: who was told what (--who filters)
+  log      the disclosure ledger: --record to note a disclosure, plain to read it
   version  print version
 
 vault location: $DOSS_HOME, default ~/.doss
@@ -52,8 +51,6 @@ func main() {
 		err = cmdTidy(os.Args[2:])
 	case "hook":
 		err = cmdHook(os.Args[2:])
-	case "answer":
-		err = cmdAnswer(os.Args[2:])
 	case "log":
 		err = cmdLog(os.Args[2:])
 	case "version", "--version", "-v":

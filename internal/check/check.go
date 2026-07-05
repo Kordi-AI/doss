@@ -51,7 +51,6 @@ var (
 	}
 	sourceVals = map[string]bool{"owner": true, "imported": true, "inferred": true, "peer": true}
 	statusVals = map[string]bool{"active": true, "suggested": true}
-	giveVals   = map[string]bool{"full": true, "rough": true, "nothing": true}
 )
 
 const maxFileSize = 128 * 1024
@@ -273,28 +272,21 @@ func checkPolicy(dir string) []Issue {
 			Hint: "run `doss init` or restore it — default is deny-all"}}
 	}
 	var p struct {
-		Groups   map[string][]string `yaml:"groups"`
-		Defaults map[string]any      `yaml:"defaults"`
-		Rules    []struct {
-			About string `yaml:"about"`
-			To    string `yaml:"to"`
-			Give  string `yaml:"give"`
-		} `yaml:"rules"`
+		Groups map[string][]string `yaml:"groups"`
+		CanSee map[string][]string `yaml:"can-see"`
 	}
 	if err := yaml.Unmarshal(b, &p); err != nil {
 		return []Issue{{File: rel, Line: yamlLine(err), Code: "E_YAML",
 			Msg: "invalid YAML: " + yamlMsg(err)}}
 	}
 	var issues []Issue
-	for i, r := range p.Rules {
-		if r.About == "" || r.To == "" {
+	// Every group granted access in can-see must be defined in groups —
+	// catches typos that would otherwise silently grant nothing.
+	for g := range p.CanSee {
+		if _, ok := p.Groups[g]; !ok {
 			issues = append(issues, Issue{File: rel, Code: "E_POLICY",
-				Msg: fmt.Sprintf("rule %d needs both `about` and `to`", i+1)})
-		}
-		if !giveVals[r.Give] {
-			issues = append(issues, Issue{File: rel, Code: "E_POLICY",
-				Msg:  fmt.Sprintf("rule %d: give: %q", i+1, r.Give),
-				Hint: "one of: full, rough, nothing"})
+				Msg:  fmt.Sprintf("can-see names group %q, which isn't defined under groups", g),
+				Hint: "define the group's members, or fix the name"})
 		}
 	}
 	return issues

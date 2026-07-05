@@ -1,17 +1,18 @@
-# Disclosure rules: who can be told what. Default: nothing leaves.
-# give: full (say it as is) | rough (only the fact file's `rough:` field, e.g. street address → city) | nothing
-# First matching rule wins, top to bottom — keep the catch-all last.
+# Who can see which categories of my info. Default: nothing (private).
+#
+# A category is a folder under self/ (e.g. profile, work). Rules are by folder,
+# not by individual fact — so adding a new fact NEVER means editing this file,
+# and adding a new group is just one block here. Nothing listed = nothing leaves.
 
 groups:
-  # kordi-friends: [kordi:pedro, kordi:qiancx]
+  # friends:  [kordi:pedro, kordi:qiancx]
+  # contacts: [kordi:jiaxin]
 
-rules:
-  # - about: profile.dietary      # "loves peanuts" → said as is
-  #   to: kordi-friends
-  #   give: full
-  # - about: profile.address     # "35 hayden st" + rough: "Toronto" → they hear "Toronto"
-  #   to: kordi-friends
-  #   give: rough
-  - about: "*"                    # passwords, everything else → "nothing to share"
-    to: anyone
-    give: nothing
+can-see:
+  # friends:  [profile, work]   # friends see everything under self/profile/ and self/work/
+  # contacts: [profile]         # contacts see only self/profile/
+  # any group or folder not listed here: nothing
+
+# Graded values (e.g. show a city, not a street) aren't set here — put a
+# `public_value:` field on the fact itself, and share that instead of the raw
+# content. Generalization is data you author, not something decided on the fly.

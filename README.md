@@ -2,13 +2,13 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Kordi-AI/doss)
 
-> A synced memory folder, plus a gate that only wakes when information leaves.
+> A synced memory folder your agents read and write as plain files — with rules, in a file, for what may leave.
 > Your agent's memory, your rules.
 
 *Doss* is short for *dossier* — the file you keep on someone. Here it's the file **you** keep on **yourself**: one place that holds who you are, that you own, and that decides for itself how much of you the outside world gets to see.
 
 For your agent: long-term memory as plain md/yaml files — remember = write a file, recall = read a file. Zero ceremony.
-For everyone else: when someone asks about you, a local program consults `policy.yaml` and returns one of three things — **cleared text / nothing / let me ask the owner** — and writes a ledger entry.
+For everyone else: `policy.yaml` says which groups of people may see which folders of your info (default: nothing). Your agent reads it, shares only what's granted, and logs each disclosure.
 The other side installs nothing. Useful at n=1 (multi-device memory + disclosure discipline); upgrades automatically when both sides run it.
 
 Status: v0 in development · [Design](docs/design/plan-v0.1.md) · [Roadmap issues](https://github.com/Kordi-AI/doss/issues)
@@ -59,8 +59,7 @@ After setup, an agent only needs four habits (details in the generated `~/.doss/
 | `doss connect` | Wire the vault into every installed agent (auto-run by init) |
 | `doss check` | Validate memory files; bad writes bounce with precise errors |
 | `doss sync` | Commit + pull + push; only validated state ever leaves |
-| `doss answer` | The outbound gate — what may be told to whom (`--to`, `--about`) |
-| `doss log` | Who was told what, merged across all your devices |
+| `doss log` | `--record` a disclosure; plain `doss log` reads "who knows what about me" |
 | `doss doctor` | Full health: vault, sync, wiring, hooks; `--fix` repairs (alias: `status`) |
 | `doss tidy` | What needs your judgment: stale facts, unconfirmed guesses, notes backlog |
 | `doss uninstall` | Delete the local vault and unwire agents (safe when a cloud copy exists) |
