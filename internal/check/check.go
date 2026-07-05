@@ -105,6 +105,7 @@ func Vault(dir string) ([]Issue, error) {
 	}
 
 	issues = append(issues, checkPolicy(dir)...)
+	issues = append(issues, checkAccess(dir)...)
 	return issues, nil
 }
 
@@ -287,6 +288,60 @@ func checkPolicy(dir string) []Issue {
 			issues = append(issues, Issue{File: rel, Code: "E_POLICY",
 				Msg:  fmt.Sprintf("can-see names group %q, which isn't defined under groups", g),
 				Hint: "define the group's members, or fix the name"})
+		}
+	}
+	return issues
+}
+
+// policyGroups returns the set of group names defined in policy.yaml.
+func policyGroups(dir string) map[string]bool {
+	out := map[string]bool{}
+	b, err := os.ReadFile(filepath.Join(dir, "policy.yaml"))
+	if err != nil {
+		return out
+	}
+	var p struct {
+		Groups map[string][]string `yaml:"groups"`
+	}
+	if yaml.Unmarshal(b, &p) == nil {
+		for g := range p.Groups {
+			out[g] = true
+		}
+	}
+	return out
+}
+
+// checkAccess validates local/access.yaml (device-local; absent is fine).
+// Per group, per folder → level in {no, read, full}; groups must exist in
+// policy.yaml.
+func checkAccess(dir string) []Issue {
+	rel := filepath.Join("local", "access.yaml")
+	b, err := os.ReadFile(filepath.Join(dir, rel))
+	if err != nil {
+		return nil // device may not use it
+	}
+	var a struct {
+		Grants map[string]map[string]string `yaml:"grants"`
+	}
+	if err := yaml.Unmarshal(b, &a); err != nil {
+		return []Issue{{File: rel, Line: yamlLine(err), Code: "E_YAML",
+			Msg: "invalid YAML: " + yamlMsg(err)}}
+	}
+	groups := policyGroups(dir)
+	levels := map[string]bool{"no": true, "read": true, "full": true}
+	var issues []Issue
+	for g, folders := range a.Grants {
+		if _, ok := groups[g]; !ok {
+			issues = append(issues, Issue{File: rel, Code: "E_ACCESS",
+				Msg:  fmt.Sprintf("group %q isn't defined in policy.yaml", g),
+				Hint: "define it under groups: in policy.yaml, or fix the name"})
+		}
+		for folder, lvl := range folders {
+			if !levels[lvl] {
+				issues = append(issues, Issue{File: rel, Code: "E_ACCESS",
+					Msg:  fmt.Sprintf("%s → %s: %q", g, folder, lvl),
+					Hint: "level must be: no, read, or full"})
+			}
 		}
 	}
 	return issues

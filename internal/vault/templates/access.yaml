@@ -1,0 +1,17 @@
+# What your agent may DO with THIS device's folders when acting for OTHER people.
+#
+# Device-local: never syncs. This is about this computer's files (which folders
+# exist differs per machine), NOT your portable preferences — that's policy.yaml.
+# Groups are defined in policy.yaml.
+#
+# Levels:  no  = don't touch it for them
+#          read = may read / share files in that folder
+#          full = may read, edit, and run there (e.g. fix a bug they delegate)
+# Default: no — a group or folder not listed gets nothing.
+
+grants:
+  # friends:
+  #   ~/Projects/opensource: full    # read, edit, run
+  #   ~/Documents/public: read       # may read/share, not modify
+  # contacts:
+  #   ~/Projects/opensource: read

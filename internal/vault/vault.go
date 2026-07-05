@@ -80,20 +80,20 @@ func Scaffold(dir string) error {
 }
 
 // EnsureLocal creates the device-only local/ area (gitignored, never synced)
-// with a starter shares.yaml. Called on both `init` and `init --from`, since a
+// with a starter access.yaml. Called on both `init` and `init --from`, since a
 // cloned vault never carries another device's local/ files.
 func EnsureLocal(dir string) error {
 	local := filepath.Join(dir, "local")
 	if err := os.MkdirAll(local, 0o755); err != nil {
 		return err
 	}
-	shares := filepath.Join(local, "shares.yaml")
-	if _, err := os.Stat(shares); err == nil {
+	access := filepath.Join(local, "access.yaml")
+	if _, err := os.Stat(access); err == nil {
 		return nil
 	}
-	b, err := fs.ReadFile(tmpl, "templates/shares.yaml")
+	b, err := fs.ReadFile(tmpl, "templates/access.yaml")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(shares, b, 0o644)
+	return os.WriteFile(access, b, 0o644)
 }
