@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Kordi-AI/doss/internal/check"
@@ -52,11 +53,21 @@ func cmdSync(args []string) error {
 
 	pushed := false
 	if gitx.HasRemote(d) {
-		if out, err := gitx.Run(d, "pull", "--rebase", "origin", "main"); err != nil {
-			_, _ = gitx.Run(d, "rebase", "--abort")
-			return fmt.Errorf("pull hit a conflict; sync aborted safely, nothing lost.\nresolve by hand in %s (both versions are in git), then rerun `doss sync`.\ngit said: %s", d, out)
+		pullArgs := []string{"pull", "--rebase"}
+		pushArgs := []string{"push"}
+		if gitx.Upstream(d) == "" {
+			branch := gitx.CurrentBranch(d)
+			pullArgs = append(pullArgs, "origin", branch)
+			pushArgs = append(pushArgs, "-u", "origin", branch)
 		}
-		if out, err := gitx.Run(d, "push", "-u", "origin", "main"); err != nil {
+		if out, err := gitx.Run(d, pullArgs...); err != nil {
+			if !(gitx.Upstream(d) == "" && strings.Contains(out, "couldn't find remote ref")) {
+				_, _ = gitx.Run(d, "rebase", "--abort")
+				return fmt.Errorf("pull hit a conflict; sync aborted safely, nothing lost.\nresolve by hand in %s (both versions are in git), then rerun `doss sync`.\ngit said: %s", d, out)
+			}
+		}
+		if out, err := gitx.Run(d, pushArgs...); err != nil {
+			_, _ = gitx.Run(d, "rebase", "--abort")
 			return fmt.Errorf("push failed: %s", out)
 		}
 		pushed = true

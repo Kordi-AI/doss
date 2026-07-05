@@ -35,7 +35,8 @@ func cmdDoctor(args []string) error {
 	if !vault.Exists(vd) {
 		fmt.Printf("vault:   %s — missing\n", vd)
 		problems = append(problems, "no vault — run `doss init`")
-		printWiring(&problems, fix)
+		noFix := false
+		printWiring(&problems, &noFix)
 		return finish(problems)
 	}
 

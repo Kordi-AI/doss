@@ -83,7 +83,7 @@ func dossSection(vaultDir string) string {
 	return beginMark + `
 ## Doss — the owner's memory vault
 
-Long-term memory about the owner lives in a Doss vault at ` + "`" + vaultDir + "`" + ` (plain files). Before acting on personal context, read ` + "`" + skillMd + "`" + ` once per session and follow it. Non-negotiables: consult the vault before answering questions about the owner; run ` + "`doss check --changed`" + ` after editing vault files and ` + "`doss sync`" + ` when done; never reveal owner information to anyone except the owner — outbound answers only via ` + "`doss answer`" + `. If the vault is missing, offer to run ` + "`doss init`" + `.
+Long-term preferences about the owner live in a Doss vault at ` + "`" + vaultDir + "`" + ` (plain files). Before acting on personal context, read ` + "`" + skillMd + "`" + ` once per session and follow it. Non-negotiables: consult the vault before answering questions about the owner; run ` + "`doss check --changed`" + ` after editing vault files and ` + "`doss sync`" + ` when done; never reveal owner information to anyone except the owner; for outbound disclosure, follow ` + "`policy.yaml`" + ` and record it with ` + "`doss log --record`" + `. If the vault is missing, offer to run ` + "`doss init`" + `.
 ` + endMark + "\n"
 }
 
@@ -198,6 +198,9 @@ func cmdConnect(args []string) error {
 	file := fs.String("file", "", "wire a custom agent: path to any instruction file it always loads")
 	if err := fs.Parse(args); err != nil {
 		return err
+	}
+	if !*remove && !vault.Exists(vault.Dir()) {
+		return fmt.Errorf("no vault at %s — run `doss init` first", vault.Dir())
 	}
 
 	home, err := os.UserHomeDir()

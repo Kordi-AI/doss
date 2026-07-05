@@ -40,6 +40,8 @@ func TestFrontmatter(t *testing.T) {
 		{"bad verify_by", "verify_by: soon", "E_VALUE"},
 		{"good verify_by", "verify_by: 2027-01-02", ""},
 		{"x- extension allowed", "x-custom: anything", ""},
+		{"public_value ok", `public_value: "Toronto"`, ""},
+		{"public_value must be string", "public_value: [Toronto]", "E_VALUE"},
 		{"rough must be string", "rough: [a, b]", "E_VALUE"},
 	}
 	for _, c := range cases {
@@ -125,6 +127,29 @@ func TestCheckAccess(t *testing.T) {
 	os.Remove(filepath.Join(dir, "local", "access.yaml"))
 	if issues := checkAccess(dir); len(issues) != 0 {
 		t.Errorf("absent access.yaml should be fine, got %v", issues)
+	}
+}
+
+func TestFilesChecksLocalAccessConsistently(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "policy.yaml"), "groups:\n  friends: [kordi:pedro]\n")
+	write(t, filepath.Join(dir, "local", "access.yaml"),
+		"grants:\n  ghost:\n    ~/p: read\n")
+
+	issues, err := Files(dir, []string{filepath.ToSlash(filepath.Join("local", "access.yaml"))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasCode(issues, "E_ACCESS") {
+		t.Fatalf("expected local/access.yaml E_ACCESS from Files, got %v", issues)
+	}
+
+	issues, err = Vault(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasCode(issues, "E_ACCESS") {
+		t.Fatalf("expected local/access.yaml E_ACCESS from Vault, got %v", issues)
 	}
 }
 

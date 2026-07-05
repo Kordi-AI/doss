@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/Kordi-AI/doss/internal/check"
 	"github.com/Kordi-AI/doss/internal/gitx"
@@ -29,6 +31,7 @@ func cmdCheck(args []string) error {
 		if err != nil {
 			return err
 		}
+		files = includeLocalAccess(dv, files)
 		issues, err = check.Files(dv, files)
 		if err != nil {
 			return err
@@ -57,4 +60,17 @@ func cmdCheck(args []string) error {
 		fmt.Println(is)
 	}
 	return fmt.Errorf("%d problem(s) — fix and rerun `doss check --changed`", len(issues))
+}
+
+func includeLocalAccess(dir string, files []string) []string {
+	rel := filepath.ToSlash(filepath.Join("local", "access.yaml"))
+	if _, err := os.Stat(filepath.Join(dir, rel)); err != nil {
+		return files
+	}
+	for _, f := range files {
+		if filepath.ToSlash(f) == rel {
+			return files
+		}
+	}
+	return append(files, rel)
 }

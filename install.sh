@@ -40,6 +40,36 @@ build_from_source() {
   mkdir -p "$BIN_DIR"; mv "$tmp/doss" "$BIN_DIR/doss"; rm -rf "$tmp"
 }
 
+verify_checksum() {
+  plat="$1"
+  bin="$2"
+  dir="$3"
+  sums="$dir/checksums.txt"
+  url="https://github.com/$REPO/releases/latest/download/checksums.txt"
+  if need curl; then
+    curl -fsSL "$url" -o "$sums" 2>/dev/null || return 1
+  elif need wget; then
+    wget -qO "$sums" "$url" 2>/dev/null || return 1
+  else
+    return 1
+  fi
+  expected=$(awk -v f="doss_${plat}" '$2 == f {print $1}' "$sums")
+  [ -n "$expected" ] || return 1
+  if need sha256sum; then
+    actual=$(sha256sum "$bin" | awk '{print $1}')
+  elif need shasum; then
+    actual=$(shasum -a 256 "$bin" | awk '{print $1}')
+  else
+    return 1
+  fi
+  if [ "$actual" != "$expected" ]; then
+    echo "checksum mismatch for doss_${plat}" >&2
+    echo "  expected: $expected" >&2
+    echo "  actual:   $actual" >&2
+    exit 1
+  fi
+}
+
 install_prebuilt() {
   plat=$(detect)
   url="https://github.com/$REPO/releases/latest/download/doss_${plat}"
@@ -53,6 +83,7 @@ install_prebuilt() {
     return 1
   fi
   [ -s "$tmp/doss" ] || return 1
+  verify_checksum "$plat" "$tmp/doss" "$tmp" || return 1
   chmod +x "$tmp/doss"
   mkdir -p "$BIN_DIR"; mv "$tmp/doss" "$BIN_DIR/doss"; rm -rf "$tmp"
 }

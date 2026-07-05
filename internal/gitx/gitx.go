@@ -32,6 +32,29 @@ func HasRemote(dir string) bool {
 	return err == nil
 }
 
+// CurrentBranch returns the checked-out branch. Doss-created vaults use main,
+// but attached vaults may use another default branch.
+func CurrentBranch(dir string) string {
+	out, err := Run(dir, "rev-parse", "--abbrev-ref", "HEAD")
+	if err != nil {
+		return "main"
+	}
+	branch := strings.TrimSpace(out)
+	if branch == "" || branch == "HEAD" {
+		return "main"
+	}
+	return branch
+}
+
+// Upstream returns the configured upstream ref for the current branch, if any.
+func Upstream(dir string) string {
+	out, err := Run(dir, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
 // LastCommitUnix returns the Unix time of the most recent commit touching
 // relpath, or 0 if the file has no commit yet (brand new / uncommitted).
 // Commit time survives clones; filesystem mtime does not.

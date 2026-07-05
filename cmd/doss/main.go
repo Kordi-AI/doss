@@ -9,7 +9,7 @@ import (
 var version = "0.1.0-dev"
 
 func usage() {
-	fmt.Print(`doss — a synced memory folder your agents read and write as plain files
+	fmt.Print(`doss — a user-owned preference vault for AI agents
 
 usage: doss <command> [flags]
 

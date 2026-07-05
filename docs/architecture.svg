@@ -7,7 +7,7 @@
 
   <rect x="0" y="0" width="680" height="790" fill="#FFFFFF"/>
 
-  <text x="340" y="34" text-anchor="middle" font-size="16" font-weight="600" fill="#1F1E1D">Dossier: a synced memory folder + a gate that wakes only for outbound info</text>
+  <text x="340" y="34" text-anchor="middle" font-size="16" font-weight="600" fill="#1F1E1D">Doss: a synced preference vault + policy for outbound disclosure</text>
 
   <!-- T1 outside world -->
   <rect x="40" y="64" width="600" height="104" rx="10" fill="#F1EFE8" stroke="#D3D1C7"/>
@@ -34,12 +34,12 @@
   <line x1="440" y1="328" x2="440" y2="276" stroke="#8A8880" stroke-width="1.5" marker-end="url(#ah)"/>
   <text x="450" y="307" font-size="12" fill="#6B6A66">cleared / denied / ask-owner</text>
 
-  <!-- T3 dossier CLI -->
+  <!-- T3 doss CLI -->
   <rect x="40" y="328" width="600" height="100" rx="10" fill="#E6F1FB" stroke="#B5D4F4"/>
-  <text x="56" y="351" font-size="14" font-weight="600" fill="#0C447C">dossier CLI · deterministic gate &amp; housekeeping (not an LLM)</text>
+  <text x="56" y="351" font-size="14" font-weight="600" fill="#0C447C">doss CLI · deterministic policy &amp; housekeeping (not an LLM)</text>
   <rect x="56" y="364" width="130" height="48" rx="8" fill="#FFFFFF" stroke="#C7D9EC"/>
-  <text x="121" y="383" text-anchor="middle" font-size="14" font-weight="500" fill="#1F1E1D">answer</text>
-  <text x="121" y="400" text-anchor="middle" font-size="12" fill="#6B6A66">gate + ledger</text>
+  <text x="121" y="383" text-anchor="middle" font-size="14" font-weight="500" fill="#1F1E1D">disclose</text>
+  <text x="121" y="400" text-anchor="middle" font-size="12" fill="#6B6A66">policy + ledger</text>
   <rect x="202" y="364" width="130" height="48" rx="8" fill="#FFFFFF" stroke="#C7D9EC"/>
   <text x="267" y="383" text-anchor="middle" font-size="14" font-weight="500" fill="#1F1E1D">check</text>
   <text x="267" y="400" text-anchor="middle" font-size="12" fill="#6B6A66">bounce &amp; retry</text>
@@ -71,7 +71,7 @@
   <rect x="464" y="518" width="160" height="52" rx="8" fill="#FFFFFF" stroke="#BCE4D4"/>
   <text x="544" y="539" text-anchor="middle" font-size="14" font-weight="500" fill="#1F1E1D">Cloud · GitHub repo</text>
   <text x="544" y="556" text-anchor="middle" font-size="12" fill="#6B6A66">private always-on copy</text>
-  <text x="340" y="600" text-anchor="middle" font-size="12" fill="#3E6E5C">self/ · peers/ · notes/ (scratch — never shared) · policy.yaml · ledger.log</text>
+  <text x="340" y="600" text-anchor="middle" font-size="12" fill="#3E6E5C">self/ · peers/ · notes/ (scratch — never shared) · policy.yaml · ledger/</text>
 
   <line x1="240" y1="630" x2="240" y2="670" stroke="#8A8880" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#ah)"/>
   <text x="250" y="653" font-size="12" fill="#6B6A66">miss / gray → ask the owner</text>

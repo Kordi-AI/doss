@@ -107,12 +107,21 @@ func hookStop() error {
 		return nil
 	}
 	if gitx.HasRemote(d) {
-		if _, err := gitx.Run(d, "pull", "--rebase", "origin", "main"); err != nil {
-			_, _ = gitx.Run(d, "rebase", "--abort")
-			fmt.Fprintln(os.Stderr, "doss: committed locally; pull hit a conflict — run `doss sync` by hand later")
-			return nil
+		pullArgs := []string{"pull", "--rebase"}
+		pushArgs := []string{"push"}
+		if gitx.Upstream(d) == "" {
+			branch := gitx.CurrentBranch(d)
+			pullArgs = append(pullArgs, "origin", branch)
+			pushArgs = append(pushArgs, "-u", "origin", branch)
 		}
-		_, _ = gitx.Run(d, "push", "-u", "origin", "main")
+		if out, err := gitx.Run(d, pullArgs...); err != nil {
+			if !(gitx.Upstream(d) == "" && strings.Contains(out, "couldn't find remote ref")) {
+				_, _ = gitx.Run(d, "rebase", "--abort")
+				fmt.Fprintln(os.Stderr, "doss: committed locally; pull hit a conflict — run `doss sync` by hand later")
+				return nil
+			}
+		}
+		_, _ = gitx.Run(d, pushArgs...)
 	}
 	return nil
 }

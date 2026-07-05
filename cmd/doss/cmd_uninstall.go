@@ -123,7 +123,11 @@ func countFacts(d string) int {
 // unpushedCount counts local commits ahead of the last-known remote tip.
 // No network: it reflects state as of the last sync, which is enough to warn.
 func unpushedCount(d string) int {
-	out, err := gitx.Run(d, "rev-list", "--count", "origin/main..main")
+	upstream := gitx.Upstream(d)
+	if upstream == "" {
+		upstream = "origin/" + gitx.CurrentBranch(d)
+	}
+	out, err := gitx.Run(d, "rev-list", "--count", upstream+"..HEAD")
 	if err != nil {
 		return 0
 	}

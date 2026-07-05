@@ -47,7 +47,8 @@ var (
 	}
 	allowedKeys = map[string]bool{
 		"source": true, "status": true, "confidence": true,
-		"tags": true, "verify_by": true, "evidence": true, "rough": true,
+		"tags": true, "verify_by": true, "evidence": true,
+		"public_value": true, "rough": true,
 	}
 	sourceVals = map[string]bool{"owner": true, "imported": true, "inferred": true, "peer": true}
 	statusVals = map[string]bool{"active": true, "suggested": true}
@@ -121,7 +122,10 @@ func Files(dir string, files []string) ([]Issue, error) {
 			if _, err := os.Stat(filepath.Join(dir, f)); err == nil {
 				issues = append(issues, checkFile(dir, f)...)
 			}
-		case strings.HasPrefix(f, "notes/"), f == "SKILL.md", f == "README.md",
+		case f == filepath.ToSlash(filepath.Join("local", "access.yaml")):
+			issues = append(issues, checkAccess(dir)...)
+		case strings.HasPrefix(f, "notes/"), strings.HasPrefix(f, "local/"),
+			f == "SKILL.md", f == "README.md",
 			f == ".gitignore", f == "ledger.log":
 			// exempt
 		default:
@@ -194,7 +198,7 @@ func checkFrontmatter(rel string, fm []byte) []Issue {
 		if !allowedKeys[k] {
 			issues = append(issues, Issue{File: rel, Code: "E_FIELD",
 				Msg:  fmt.Sprintf("unknown frontmatter key %q", k),
-				Hint: "allowed: source, status, confidence, tags, verify_by, evidence, rough (x-* for extensions)"})
+				Hint: "allowed: source, status, confidence, tags, verify_by, evidence, public_value (x-* for extensions)"})
 			continue
 		}
 		switch k {
@@ -254,6 +258,12 @@ func checkFrontmatter(rel string, fm []byte) []Issue {
 			if _, ok := v.(string); !ok {
 				issues = append(issues, Issue{File: rel, Code: "E_VALUE",
 					Msg: "evidence must be a string"})
+			}
+		case "public_value":
+			if _, ok := v.(string); !ok {
+				issues = append(issues, Issue{File: rel, Code: "E_VALUE",
+					Msg:  "public_value must be a string",
+					Hint: `the owner-authored public version, e.g. public_value: "Toronto" for a street address`})
 			}
 		case "rough":
 			if _, ok := v.(string); !ok {

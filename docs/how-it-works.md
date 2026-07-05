@@ -21,6 +21,8 @@ One binary (`doss`), git underneath, no database, no server.
   peers/         # what other people shared with you
   notes/         # scratch; never validated, never shared
   policy.yaml    # disclosure rules (default: nothing leaves)
+  local/access.yaml
+                 # device-local delegation rules; gitignored, never synced
   ledger/        # who was told what — one append-only file per device
   SKILL.md       # the one-pager agents follow
 ```
@@ -35,6 +37,7 @@ A fact file is markdown with optional YAML frontmatter. All fields are optional;
 | `tags` | list of strings | free grouping |
 | `verify_by` | YYYY-MM-DD | freshness contract; past due → tidy lists it |
 | `evidence` | string | pointer to where this was learned |
+| `public_value` | string | owner-authored public version to share instead of the raw fact |
 
 ## Command reference
 
@@ -65,7 +68,7 @@ agent writes self/profile/address.md   → post-edit: check that file ✓
 agent replies and stops                → stop: commit both + push
 ```
 
-`doss check --changed` is the same inspector, summoned by hand — for harnesses without hooks and for humans.
+`doss check --changed` is the same inspector, summoned by hand — for harnesses without hooks and for humans. It also checks `local/access.yaml` when present, even though that file is device-local and gitignored.
 
 Per-harness behavior today:
 

@@ -60,7 +60,7 @@ func cmdInit(args []string) error {
 		(*interactive || stdinIsTTY())
 	if guided {
 		p := newPrompter()
-		fmt.Println("Doss setup — your agent's memory, your rules.")
+		fmt.Println("Doss setup — your preference vault, your disclosure rules.")
 		fmt.Println()
 		if p.choose("Is this your first vault, or do you already have one in the cloud?",
 			"Create a new vault on this machine",
@@ -259,6 +259,9 @@ func cloneVault(src, dir string) error {
 			_ = os.RemoveAll(dir) // partial clone; dir was empty before (checked)
 			return fmt.Errorf("clone failed: %s", strings.TrimSpace(string(out)))
 		}
+	}
+	if !strings.Contains(src, "://") {
+		src = "https://github.com/" + strings.TrimSuffix(src, ".git") + ".git"
 	}
 	if out, err := exec.Command("git", "clone", src, dir).CombinedOutput(); err != nil {
 		return fmt.Errorf("clone failed: %s\n(private repo? log in with `gh auth login`, or pass a token when prompted)", strings.TrimSpace(string(out)))
