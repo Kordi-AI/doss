@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Kordi-AI/dossier/internal/check"
-	"github.com/Kordi-AI/dossier/internal/policy"
-	"github.com/Kordi-AI/dossier/internal/vault"
+	"github.com/Kordi-AI/doss/internal/check"
+	"github.com/Kordi-AI/doss/internal/policy"
+	"github.com/Kordi-AI/doss/internal/vault"
 )
 
 type stringList []string

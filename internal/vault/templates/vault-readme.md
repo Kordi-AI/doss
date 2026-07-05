@@ -1,6 +1,6 @@
 # My Doss
 
-Private memory vault managed with [Doss](https://github.com/Kordi-AI/dossier).
+Private memory vault managed with [Doss](https://github.com/Kordi-AI/doss).
 
 - `self/` — facts about me (path = topic)
 - `peers/` — what others shared with me

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Kordi-AI/dossier/internal/vault"
+	"github.com/Kordi-AI/doss/internal/vault"
 )
 
 const (

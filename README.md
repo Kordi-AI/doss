@@ -1,5 +1,7 @@
 # Doss
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Kordi-AI/doss)
+
 > A synced memory folder, plus a gate that only wakes when information leaves.
 > Your agent's memory, your rules.
 
@@ -9,14 +11,14 @@ For your agent: long-term memory as plain md/yaml files — remember = write a f
 For everyone else: when someone asks about you, a local program consults `policy.yaml` and returns one of three things — **cleared text / nothing / let me ask the owner** — and writes a ledger entry.
 The other side installs nothing. Useful at n=1 (multi-device memory + disclosure discipline); upgrades automatically when both sides run it.
 
-Status: v0 in development · [Design](docs/design/plan-v0.1.md) · [Roadmap issues](https://github.com/Kordi-AI/dossier/issues)
+Status: v0 in development · [Design](docs/design/plan-v0.1.md) · [Roadmap issues](https://github.com/Kordi-AI/doss/issues)
 
 ## Install
 
 **Option 1 — do it yourself**
 
 ```sh
-git clone https://github.com/Kordi-AI/dossier && cd doss && ./install.sh
+git clone https://github.com/Kordi-AI/doss && cd doss && ./install.sh
 doss init            # guided setup — just answer the questions
 ```
 
@@ -25,12 +27,12 @@ Run in a terminal, `doss init` walks you through it: new vault or connect to an 
 **Option 2 — paste this to your agent**
 
 > Please install Doss and set up my memory vault:
-> 1. `git clone https://github.com/Kordi-AI/dossier && cd doss && ./install.sh`
+> 1. `git clone https://github.com/Kordi-AI/doss && cd doss && ./install.sh`
 > 2. **Ask me** which name and email my vault's git commits should use, then run `doss init --github --git-name "…" --git-email "…"` (drop `--github` if I don't have gh or don't want a cloud copy; use `--from owner/repo` if I already have a cloud vault)
 > 3. Check the `connect` output it prints: if your own tool is NOT listed there, wire yourself with `doss connect --file <the instruction file you load every session>`.
 > 4. Read `~/.doss/SKILL.md` and manage my memory by its rules from now on.
 
-**Second device?** Run `doss init` and pick *"connect to my existing cloud vault"* — give it your repo (e.g. `ShenzheZhu/my-dossier`) and every device shares one memory, kept aligned by `doss sync`. Agents can skip the questions with `doss init --from owner/repo`.
+**Second device?** Run `doss init` and pick *"connect to my existing cloud vault"* — give it your repo (e.g. `ShenzheZhu/my-doss`) and every device shares one memory, kept aligned by `doss sync`. Agents can skip the questions with `doss init --from owner/repo`.
 
 `init` automatically runs `doss connect`, which drops a small managed section into each installed agent's **always-loaded global instruction file** — `~/.claude/CLAUDE.md` (Claude Code), `~/.codex/AGENTS.md` (Codex), `~/.gemini/GEMINI.md` (Gemini CLI), OpenClaw's workspace `AGENTS.md`, Windsurf's global rules. Agents we've never heard of work too: `doss connect --file <the instruction file it always loads>`. The section carries the vault path and the non-negotiables and is injected deterministically into every session of every project. Whichever agent sets Doss up, every other agent on the machine discovers it in its next session.
 
@@ -67,6 +69,7 @@ After setup, an agent only needs four habits (details in the generated `~/.doss/
 
 ## Docs
 
+- [Ask DeepWiki](https://deepwiki.com/Kordi-AI/doss) — auto-generated, always-current docs you can ask questions of
 - [How it works](docs/how-it-works.md) — the detailed mechanics: commands, hooks, wiring, sync, failure modes
 - [Plan v0.1](docs/design/plan-v0.1.md) — all design decisions, with a decision log
 - [Memory compatibility draft](docs/design/memory-adapters.md) — we don't compete with memory systems; we make them governable

@@ -1,4 +1,4 @@
-module github.com/Kordi-AI/dossier
+module github.com/Kordi-AI/doss
 
 go 1.25.0
 

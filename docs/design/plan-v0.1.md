@@ -139,7 +139,7 @@ Predicate rate limiting (approved); receipts + update/invalidation push when bot
 | 07-03 | Requester identity: platform ids + owner-issued API tokens; misidentification fails safe (less disclosure, never more) |
 | 07-03 | Cloud: self-hosted baseline; platform-hosted (Kordi) as a convenience tier |
 | 07-03 | Benchmark against long-term-memory systems (Mem0/Letta/Zep): match them at home, then show the disclosure capability nobody has |
-| 07-04 | Cloud copy v0 = the user's own **private GitHub repo** (`doss init --github`, default name `my-dossier`); any git remote via `--remote` |
+| 07-04 | Cloud copy v0 = the user's own **private GitHub repo** (`doss init --github`, default name `my-doss`); any git remote via `--remote` |
 | 07-04 | Implementation language: Go (single static binary, trivial cross-compile) — reversible if challenged |
 | 07-04 | Repo language: **English only** — code, docs, issues, PRs |
 | 07-04 | `give` reduced to three levels (full / rough / nothing); boolean-only level cut — needs a judge, and "no answer → ask the owner" covers the need |

@@ -14,15 +14,15 @@ import (
 
 	"golang.org/x/term"
 
-	"github.com/Kordi-AI/dossier/internal/gitx"
-	"github.com/Kordi-AI/dossier/internal/vault"
+	"github.com/Kordi-AI/doss/internal/gitx"
+	"github.com/Kordi-AI/doss/internal/vault"
 )
 
 func cmdInit(args []string) error {
 	fs := flag.NewFlagSet("init", flag.ExitOnError)
 	dir := fs.String("dir", "", "vault directory (default $DOSS_HOME or ~/.doss)")
 	github := fs.Bool("github", false, "create a private GitHub repo as the cloud copy (requires gh)")
-	repo := fs.String("repo", "my-dossier", "repo name used with --github")
+	repo := fs.String("repo", "my-doss", "repo name used with --github")
 	remote := fs.String("remote", "", "attach an existing git remote URL as the cloud copy")
 	from := fs.String("from", "", "attach this device to an existing vault: GitHub owner/repo or any git URL")
 	noConnect := fs.Bool("no-connect", false, "skip wiring agent global configs (doss connect)")
@@ -68,7 +68,7 @@ func cmdInit(args []string) error {
 			mode = "attach"
 			_ = p.choose("Where does it live? (more clouds later)", "GitHub")
 			for attachRef == "" {
-				attachRef = p.ask("GitHub repo (owner/name, e.g. you/my-dossier)", "")
+				attachRef = p.ask("GitHub repo (owner/name, e.g. you/my-doss)", "")
 			}
 			if !ghLoggedIn() {
 				fmt.Println("gh CLI isn't logged in — a GitHub personal access token (repo scope) works too.")
@@ -220,7 +220,7 @@ next steps:
 
 	if cloud == "local only" {
 		fmt.Println(`  3. add cloud sync anytime:
-       git -C ` + abs + ` remote add origin <url>   (or: gh repo create my-dossier --private --source ` + abs + ` --remote origin --push)`)
+       git -C ` + abs + ` remote add origin <url>   (or: gh repo create my-doss --private --source ` + abs + ` --remote origin --push)`)
 	}
 	return maybeConnect(*noConnect)
 }

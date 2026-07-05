@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Kordi-AI/dossier/internal/check"
-	"github.com/Kordi-AI/dossier/internal/gitx"
-	"github.com/Kordi-AI/dossier/internal/vault"
+	"github.com/Kordi-AI/doss/internal/check"
+	"github.com/Kordi-AI/doss/internal/gitx"
+	"github.com/Kordi-AI/doss/internal/vault"
 )
 
 func cmdSync(args []string) error {

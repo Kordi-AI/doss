@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Kordi-AI/dossier/internal/gitx"
-	"github.com/Kordi-AI/dossier/internal/vault"
+	"github.com/Kordi-AI/doss/internal/gitx"
+	"github.com/Kordi-AI/doss/internal/vault"
 )
 
 // cmdUninstall tears down the local vault and unwires the agents. Like git,
