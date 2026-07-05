@@ -236,10 +236,19 @@ func checkFrontmatter(rel string, fm []byte) []Issue {
 				}
 			}
 		case "verify_by":
-			s := fmt.Sprintf("%v", v)
-			if _, err := time.Parse("2006-01-02", s); err != nil {
+			// YAML parses a bare 2027-01-02 into time.Time; a quoted string
+			// stays a string. Accept either, as long as it's a real date.
+			switch d := v.(type) {
+			case time.Time:
+				// already a valid date
+			case string:
+				if _, err := time.Parse("2006-01-02", d); err != nil {
+					issues = append(issues, Issue{File: rel, Code: "E_VALUE",
+						Msg: "verify_by: " + d, Hint: "date as YYYY-MM-DD"})
+				}
+			default:
 				issues = append(issues, Issue{File: rel, Code: "E_VALUE",
-					Msg: "verify_by: " + s, Hint: "date as YYYY-MM-DD"})
+					Msg: fmt.Sprintf("verify_by: %v", v), Hint: "date as YYYY-MM-DD"})
 			}
 		case "evidence":
 			if _, ok := v.(string); !ok {
