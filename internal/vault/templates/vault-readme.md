@@ -6,6 +6,8 @@ Private memory vault managed with [Doss](https://github.com/Kordi-AI/doss).
 - `peers/` — Markdown notes others shared with me
 - `notes/` — Markdown scratch; never leaves this machine
 - `policy.yaml` — disclosure rules (default: nothing leaves)
-- `INSTRUCTION.md` — rules agents must read before using this vault
+- `INSTRUCTION.md` — entry rules agents read before using this vault
+- `CONTENT.md` — content maintenance rules
+- `DISCLOSURE.md` — outbound disclosure and local access rules
 
 This repo is private. Keep it that way.

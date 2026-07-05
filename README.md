@@ -17,7 +17,7 @@ wiring, and policy-backed disclosure controls and logs.
 | Concern | Where it lives | What it does |
 | --- | --- | --- |
 | Preference vault | `~/.doss/self/`, `peers/`, `notes/` | Stores long-term preferences, facts, and notes as Markdown files. |
-| Agent rules | `~/.doss/INSTRUCTION.md` | Tells agents how to read, write, check, sync, and disclose. |
+| Agent rules | `~/.doss/INSTRUCTION.md`, `CONTENT.md`, `DISCLOSURE.md` | Splits entry routing, content maintenance, and outbound disclosure rules. |
 | Disclosure policy | `~/.doss/policy.yaml` | Maps groups of people to `full`, `rough`, or `no` disclosure for owner topics. Default: deny. |
 | Local access policy | `~/.doss/local/access.yaml` | Gitignored, device-local rules for non-owner tasks on this machine's files. |
 | Audit ledger | `doss log` | Records who was told what; it does not authorize disclosure. |
@@ -53,7 +53,7 @@ After setup, agents operate on the vault as normal files:
 | Needs owner context | Read or search the vault with normal file tools. |
 | Edited vault files | Run `doss check --changed` and fix precise errors. |
 | Finished a batch/session | Run `doss sync`. |
-| Disclosed owner info | Run `doss log --record --to <who> --shared <topic>`. |
+| Disclosed owner info | Run `doss log --record --to <verified-id> --shared <topic> --level <rough|full>`. |
 
 For cloud sync and multi-device setup, see the
 [Getting Started docs](https://doss-docs-git-doss-docs-shenzhe-zhus-projects.vercel.app/getting-started).
@@ -66,7 +66,7 @@ For cloud sync and multi-device setup, see the
 | `doss connect` | Wire the vault into installed agents; rerun after installing a new agent. |
 | `doss check` | Validate memory files; `--changed` checks only files touched since the last commit. |
 | `doss sync` | Commit, pull, and push; refuses to sync invalid vault state. |
-| `doss log` | Record or read the disclosure ledger. |
+| `doss log` | Record or read the disclosure ledger; records include `--level rough|full`. |
 | `doss doctor` | Show vault health, sync, wiring, hooks, and tidy hints; `--fix` repairs wiring. |
 | `doss tidy` | List stale facts, unconfirmed guesses, and notes backlog for owner judgment. |
 | `doss uninstall` | Remove the local vault and unwire agents without touching the cloud copy. |

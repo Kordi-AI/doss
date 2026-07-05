@@ -8,7 +8,7 @@
 #   local/access.yaml = what local folders may be read/edited/run here, no sync
 #
 # local/access.yaml never grants permission to disclose owner facts from self/.
-# Groups are defined in policy.yaml.
+# Groups and verified requester ids are defined in policy.yaml.
 #
 # Levels:  no  = don't touch it for them
 #          read = may read / share files in that folder

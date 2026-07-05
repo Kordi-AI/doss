@@ -217,7 +217,9 @@ ask the owner what identity their memory vault should commit as, then rerun:
   peers/        Markdown notes others shared with you
   notes/        Markdown scratch — never leaves this machine
   policy.yaml   disclosure rules (default: nothing leaves)
-  INSTRUCTION.md agent rules for this vault
+  INSTRUCTION.md agent entry rules
+  CONTENT.md     content maintenance rules
+  DISCLOSURE.md  outbound disclosure/access rules
 
 cloud sync: %s
 

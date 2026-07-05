@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -17,15 +18,16 @@ import (
 )
 
 type ledgerEntry struct {
-	Ts, To, Shared, Note string
-	device               string
+	Ts, To, Shared, Level, Note string
+	device                      string
 }
 
 func cmdLog(args []string) error {
 	fs := flag.NewFlagSet("log", flag.ExitOnError)
 	record := fs.Bool("record", false, "append a disclosure to the ledger (use after telling someone about the owner)")
 	to := fs.String("to", "", "with --record: who was told (platform-verified id, e.g. kordi:pedro)")
-	shared := fs.String("shared", "", "with --record: what was shared, e.g. profile.dietary")
+	shared := fs.String("shared", "", "with --record: what was shared, e.g. profile/address")
+	level := fs.String("level", "", "with --record: disclosure level, rough or full")
 	note := fs.String("note", "", "with --record: why / context (optional)")
 	who := fs.String("who", "", "when reading: only entries for this requester")
 	device := fs.String("device", "", "when reading: only entries recorded on this device")
@@ -38,13 +40,25 @@ func cmdLog(args []string) error {
 	}
 
 	if *record {
-		if *to == "" || *shared == "" {
-			return fmt.Errorf("--record needs --to <who> and --shared <what>")
+		if *to == "" || *shared == "" || *level == "" {
+			return fmt.Errorf("--record needs --to <verified-id>, --shared <topic>, and --level <rough|full>")
 		}
-		return writeLedger(d, *to, *shared, *note)
+		if !requesterIDRe.MatchString(*to) {
+			return fmt.Errorf("--to must be a platform-verified id in platform:id form, e.g. kordi:pedro")
+		}
+		if !validSharedTopic(*shared) {
+			return fmt.Errorf("--shared must be a topic path under self/ without the self/ prefix, e.g. profile/address")
+		}
+		if *level != "rough" && *level != "full" {
+			return fmt.Errorf("--level must be rough or full")
+		}
+		return writeLedger(d, *to, *shared, *level, *note)
 	}
 
-	entries, devices := readLedger(d)
+	entries, devices, err := readLedger(d)
+	if err != nil {
+		return err
+	}
 	if len(entries) == 0 {
 		fmt.Println("ledger is empty — nothing has ever been disclosed")
 		return nil
@@ -60,7 +74,7 @@ func cmdLog(args []string) error {
 			continue
 		}
 		shown++
-		line := fmt.Sprintf("%s  %-12s %-16s %s", e.Ts, e.device, e.To, e.Shared)
+		line := fmt.Sprintf("%s  %-12s %-16s %-5s %s", e.Ts, e.device, e.To, e.Level, e.Shared)
 		if e.Note != "" {
 			line += "  (" + e.Note + ")"
 		}
@@ -76,9 +90,9 @@ func cmdLog(args []string) error {
 
 // writeLedger appends one disclosure to this device's ledger file. One file
 // per device (ledger/<id>.log) so syncing never conflicts.
-func writeLedger(d, to, shared, note string) error {
+func writeLedger(d, to, shared, level, note string) error {
 	entry := map[string]string{
-		"ts": time.Now().Format(time.RFC3339), "to": to, "shared": shared, "note": note,
+		"ts": time.Now().Format(time.RFC3339), "to": to, "shared": shared, "level": level, "note": note,
 	}
 	b, _ := json.Marshal(entry)
 	dir := filepath.Join(d, "ledger")
@@ -93,48 +107,79 @@ func writeLedger(d, to, shared, note string) error {
 	if _, err := f.Write(append(b, '\n')); err != nil {
 		return err
 	}
-	fmt.Printf("logged: %s → %s\n", shared, to)
+	fmt.Printf("logged: %s (%s) → %s\n", shared, level, to)
 	return nil
 }
 
 // readLedger merges every device's ledger file into one time-ordered list.
-func readLedger(d string) (entries []ledgerEntry, devices []string) {
+func readLedger(d string) (entries []ledgerEntry, devices []string, err error) {
 	seen := map[string]bool{}
-	add := func(path, device string) {
+	add := func(path, device string) error {
 		raw, err := os.ReadFile(path)
 		if err != nil {
-			return
+			return nil
 		}
 		if !seen[device] && device != "" {
 			seen[device] = true
 			devices = append(devices, device)
 		}
-		for _, ln := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+		for i, ln := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
 			if ln == "" {
 				continue
 			}
-			var e ledgerEntry
-			if json.Unmarshal([]byte(ln), &e) == nil {
-				e.device = device
-				entries = append(entries, e)
+			var raw map[string]json.RawMessage
+			if err := json.Unmarshal([]byte(ln), &raw); err != nil || raw == nil {
+				return fmt.Errorf("%s:%d malformed ledger JSON — run `doss check` for details", path, i+1)
 			}
+			var e ledgerEntry
+			if err := json.Unmarshal([]byte(ln), &e); err != nil {
+				return fmt.Errorf("%s:%d malformed ledger JSON — run `doss check` for details", path, i+1)
+			}
+			e.device = device
+			entries = append(entries, e)
 		}
+		return nil
 	}
 
 	dir := filepath.Join(d, "ledger")
+	if _, err := os.Stat(filepath.Join(d, "ledger.log")); err == nil {
+		if err := add(filepath.Join(d, "ledger.log"), "legacy"); err != nil {
+			return nil, nil, err
+		}
+	}
 	if items, err := os.ReadDir(dir); err == nil {
 		for _, it := range items {
 			if it.IsDir() || !strings.HasSuffix(it.Name(), ".log") {
 				continue
 			}
-			add(filepath.Join(dir, it.Name()), strings.TrimSuffix(it.Name(), ".log"))
+			if err := add(filepath.Join(dir, it.Name()), strings.TrimSuffix(it.Name(), ".log")); err != nil {
+				return nil, nil, err
+			}
 		}
 	}
 	sort.Strings(devices)
-	return entries, devices
+	return entries, devices, nil
 }
 
 var deviceSanitize = regexp.MustCompile(`[^a-z0-9-]+`)
+var requesterIDRe = regexp.MustCompile(`^[a-z][a-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._@-]*$`)
+var topicPartRe = regexp.MustCompile(`^[a-z0-9._-]+$`)
+
+func validSharedTopic(topic string) bool {
+	if topic == "" || strings.HasPrefix(topic, "/") || strings.HasPrefix(topic, "self/") {
+		return false
+	}
+	clean := path.Clean(topic)
+	if clean != topic || clean == "." || strings.HasPrefix(clean, "../") || clean == ".." {
+		return false
+	}
+	for _, part := range strings.Split(topic, "/") {
+		if part == "" || !topicPartRe.MatchString(part) {
+			return false
+		}
+	}
+	return true
+}
 
 // deviceID is a stable, machine-local id stored in the vault's local git
 // config (never syncs). Hostname makes it recognizable; a random suffix

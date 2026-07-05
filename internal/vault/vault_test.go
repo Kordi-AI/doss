@@ -24,7 +24,7 @@ func TestScaffoldAndExists(t *testing.T) {
 	}
 	for _, f := range []string{
 		"self", "peers", "notes",
-		"policy.yaml", "INSTRUCTION.md", "README.md", ".gitignore",
+		"policy.yaml", "INSTRUCTION.md", "CONTENT.md", "DISCLOSURE.md", "README.md", ".gitignore",
 		filepath.Join("local", "access.yaml"),
 	} {
 		if _, err := os.Stat(filepath.Join(dir, f)); err != nil {
@@ -51,17 +51,10 @@ func TestScaffoldAndExists(t *testing.T) {
 	}
 }
 
-func TestInstructionPathAndLegacyFallback(t *testing.T) {
+func TestInstructionPathAndEnsureInstruction(t *testing.T) {
 	dir := t.TempDir()
 	if got := InstructionPath(dir); got != filepath.Join(dir, "INSTRUCTION.md") {
 		t.Fatalf("empty vault instruction path = %q", got)
-	}
-
-	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("legacy\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if got := InstructionPath(dir); got != filepath.Join(dir, "SKILL.md") {
-		t.Fatalf("legacy instruction path = %q", got)
 	}
 
 	if err := EnsureInstruction(dir); err != nil {
@@ -70,21 +63,32 @@ func TestInstructionPathAndLegacyFallback(t *testing.T) {
 	if got := InstructionPath(dir); got != filepath.Join(dir, "INSTRUCTION.md") {
 		t.Fatalf("primary instruction path = %q", got)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "SKILL.md")); err != nil {
-		t.Fatalf("legacy file should be left in place: %v", err)
+	for _, f := range []string{"INSTRUCTION.md", "CONTENT.md", "DISCLOSURE.md"} {
+		if _, err := os.Stat(filepath.Join(dir, f)); err != nil {
+			t.Fatalf("EnsureInstruction should seed %s: %v", f, err)
+		}
 	}
 }
 
-func TestInstructionTemplateExplainsFactShape(t *testing.T) {
+func TestInstructionTemplatesExplainFactShapeAndDisclosure(t *testing.T) {
 	dir := t.TempDir()
 	if err := Scaffold(dir); err != nil {
 		t.Fatal(err)
 	}
-	b, err := os.ReadFile(filepath.Join(dir, "INSTRUCTION.md"))
-	if err != nil {
-		t.Fatal(err)
+	mustRead := func(name string) string {
+		t.Helper()
+		b, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
 	}
-	text := string(b)
+	entry := mustRead("INSTRUCTION.md")
+	content := mustRead("CONTENT.md")
+	disclosure := mustRead("DISCLOSURE.md")
+	if !strings.Contains(entry, "CONTENT.md") || !strings.Contains(entry, "DISCLOSURE.md") {
+		t.Fatalf("INSTRUCTION.md should route to split instruction files:\n%s", entry)
+	}
 	for _, want := range []string{
 		"Standard `self/**/*.md` fact shape",
 		"The `rough:` field is the ONLY rough value",
@@ -92,8 +96,17 @@ func TestInstructionTemplateExplainsFactShape(t *testing.T) {
 		"There is no `no:` field inside a fact",
 		"Peer note at `peers/kordi-pedro/team.md`",
 	} {
-		if !strings.Contains(text, want) {
-			t.Fatalf("INSTRUCTION.md should contain %q", want)
+		if !strings.Contains(content, want) {
+			t.Fatalf("CONTENT.md should contain %q", want)
+		}
+	}
+	for _, want := range []string{
+		"[Trusted current request metadata]",
+		"Contact Onboarding",
+		"doss log --record --to <verified-id> --shared <topic> --level <rough|full>",
+	} {
+		if !strings.Contains(disclosure, want) {
+			t.Fatalf("DISCLOSURE.md should contain %q", want)
 		}
 	}
 }

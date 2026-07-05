@@ -13,8 +13,9 @@ import (
 var tmpl embed.FS
 
 const (
-	InstructionFile       = "INSTRUCTION.md"
-	LegacyInstructionFile = "SKILL.md"
+	InstructionFile           = "INSTRUCTION.md"
+	ContentInstructionFile    = "CONTENT.md"
+	DisclosureInstructionFile = "DISCLOSURE.md"
 )
 
 // Dir returns the vault directory: $DOSS_HOME or ~/.doss.
@@ -49,30 +50,25 @@ func MustExist() (string, error) {
 	return d, nil
 }
 
-// InstructionPath returns the agent instruction file to reference. New vaults
-// use INSTRUCTION.md; older vaults that only have SKILL.md remain readable.
+// InstructionPath returns the agent instruction file to reference.
 func InstructionPath(dir string) string {
-	if _, err := os.Stat(filepath.Join(dir, InstructionFile)); err == nil {
-		return filepath.Join(dir, InstructionFile)
-	}
-	if _, err := os.Stat(filepath.Join(dir, LegacyInstructionFile)); err == nil {
-		return filepath.Join(dir, LegacyInstructionFile)
-	}
 	return filepath.Join(dir, InstructionFile)
 }
 
-// EnsureInstruction seeds the current primary instruction file for vaults
-// created before INSTRUCTION.md existed.
+// EnsureInstruction seeds current instruction files for vaults created before
+// the split instruction layout existed. It never overwrites owner-edited files.
 func EnsureInstruction(dir string) error {
-	path := filepath.Join(dir, InstructionFile)
-	if _, err := os.Stat(path); err == nil {
-		return nil
+	files := map[string]string{
+		InstructionFile:           "templates/INSTRUCTION.md",
+		ContentInstructionFile:    "templates/CONTENT.md",
+		DisclosureInstructionFile: "templates/DISCLOSURE.md",
 	}
-	b, err := fs.ReadFile(tmpl, "templates/INSTRUCTION.md")
-	if err != nil {
-		return err
+	for dst, src := range files {
+		if err := seedTemplateFile(dir, dst, src); err != nil {
+			return err
+		}
 	}
-	return os.WriteFile(path, b, 0o644)
+	return nil
 }
 
 // Scaffold creates the vault layout. It never overwrites existing files.
@@ -89,25 +85,31 @@ func Scaffold(dir string) error {
 		}
 	}
 	files := map[string]string{
-		InstructionFile: "templates/INSTRUCTION.md",
-		"policy.yaml":   "templates/policy.yaml",
-		"README.md":     "templates/vault-readme.md",
-		".gitignore":    "templates/vault-gitignore",
+		InstructionFile:           "templates/INSTRUCTION.md",
+		ContentInstructionFile:    "templates/CONTENT.md",
+		DisclosureInstructionFile: "templates/DISCLOSURE.md",
+		"policy.yaml":             "templates/policy.yaml",
+		"README.md":               "templates/vault-readme.md",
+		".gitignore":              "templates/vault-gitignore",
 	}
 	for dst, src := range files {
-		path := filepath.Join(dir, dst)
-		if _, err := os.Stat(path); err == nil {
-			continue
-		}
-		b, err := fs.ReadFile(tmpl, src)
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(path, b, 0o644); err != nil {
+		if err := seedTemplateFile(dir, dst, src); err != nil {
 			return err
 		}
 	}
 	return EnsureLocal(dir)
+}
+
+func seedTemplateFile(dir, dst, src string) error {
+	path := filepath.Join(dir, dst)
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+	b, err := fs.ReadFile(tmpl, src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, b, 0o644)
 }
 
 // EnsureLocal creates the device-only local/ area (gitignored, never synced)

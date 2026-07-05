@@ -21,7 +21,7 @@ usage: doss <command> [flags]
   tidy     dirt report: stale facts, unconfirmed guesses, notes backlog
   uninstall  delete the local vault and unwire agents (safe when a cloud copy exists)
   hook     harness hook endpoint (post-edit, stop) — wired by connect
-  log      the disclosure ledger: --record to note a disclosure, plain to read it
+  log      the disclosure ledger: --record --level rough|full to note a disclosure
   version  print version
 
 vault location: $DOSS_HOME, default ~/.doss

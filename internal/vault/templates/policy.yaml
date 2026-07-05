@@ -5,6 +5,8 @@
 # Nothing listed = no disclosure.
 
 groups:
+  # Member ids must be platform-verified ids in platform:id form.
+  # Add a requester only after the owner confirms which group they belong to.
   # friends:  [kordi:pedro, kordi:qiancx]
   # contacts: [kordi:jiaxin]
 

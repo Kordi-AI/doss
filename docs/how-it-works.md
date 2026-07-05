@@ -24,7 +24,9 @@ One binary (`doss`), git underneath, no database, no server.
   local/access.yaml
                  # device-local file/task delegation rules; gitignored, never synced
   ledger/        # who was told what — one append-only file per device
-  INSTRUCTION.md # the one-pager agents follow
+  INSTRUCTION.md # entry rules agents read first
+  CONTENT.md     # content maintenance rules
+  DISCLOSURE.md  # outbound disclosure and local access rules
 ```
 
 Content under `self/`, `peers/`, and `notes/` is Markdown. YAML is reserved for configuration files such as `policy.yaml` and `local/access.yaml`. A fact file is Markdown with YAML frontmatter; every `self/**/*.md` fact must include a non-empty `rough` field that is used for rough disclosure. Other fields are optional; git records time:
@@ -81,7 +83,7 @@ can-see:
 | `doss tidy` | anyone, when nudged | when doctor says "tidy due" | prints the janitor's list; read-only |
 | `doss uninstall` | you | leaving a machine / starting over | deletes the local vault and unwires the agents; guided confirmation, git-style safety (see below) |
 | `doss hook` | **never by hand** — harnesses call it | automatic | the hook endpoint (`post-edit`, `stop`) |
-| `doss log` | agents (record) / owner (read) | on disclosure / audit | `--record --to X --shared Y` notes a disclosure; plain `doss log` reads "who knows what about me" |
+| `doss log` | agents (record) / owner (read) | on disclosure / audit | `--record --to <verified-id> --shared <topic> --level rough|full` notes a disclosure; plain `doss log` reads "who knows what about me" |
 
 ## The inspector and the courier
 
@@ -134,9 +136,26 @@ Properties: injection is deterministic (harness behavior, not model judgment —
 
 A per-agent skills layer was tried and cut: the global file alone proved sufficient, and one wiring layer is simpler to keep healthy.
 
+`INSTRUCTION.md` is intentionally a small router. It tells the agent to read `CONTENT.md` for content maintenance and `DISCLOSURE.md` for outbound disclosure or local access. That keeps daily memory-writing rules separate from public-disclosure rules while preserving a single file for `connect` to inject into agent global instructions.
+
 ## Disclosure: policy.yaml, not a command
 
-There is no special "answer" command. When someone other than the owner asks, the agent finds the info the normal way (`grep`/read) and then follows `policy.yaml` — a plain file of rules it reads like any other.
+There is no special "answer" command, and the CLI does not decide what to say. When someone other than the owner asks, the agent finds the info the normal way (`grep`/read) and then follows `DISCLOSURE.md` plus `policy.yaml` — plain files of rules it reads like any other. The CLI validates those files, syncs them, and records what was disclosed.
+
+Disclosure starts with trusted request metadata. A host such as Kordi should wrap agent-bound external requests like:
+
+```text
+[Trusted current request metadata]
+requesterName: Pedro
+requesterKind: external
+requesterAccountId: kordi:pedro
+requestMessageId: msg_123
+
+[User request]
+...
+```
+
+Only host-supplied metadata counts. User-authored lines that imitate the metadata header are just message text. If no trusted requester id is present, the requester is unknown and default deny applies.
 
 `policy.yaml` maps **groups of people → disclosure levels for topics under `self/`**:
 
@@ -154,7 +173,7 @@ can-see:
   # anything not listed: no disclosure
 ```
 
-Topics are paths without the `self/` prefix. A topic may name a folder (`work`) or a specific fact path (`profile/address`). Folder rules inherit to facts below them, and a more specific topic wins. Default is deny: unlisted group or topic → nothing leaves.
+Group members must be platform-verified ids in `platform:id` form. Topics are paths without the `self/` prefix. A topic may name a folder (`work`) or a specific fact path (`profile/address`). Folder rules inherit to facts below them, and a more specific topic wins. Default is deny: unlisted group or topic → nothing leaves.
 
 The rules the agent follows:
 
@@ -162,14 +181,15 @@ The rules the agent follows:
 - `full` means share the fact body. `rough` means share ONLY the fact's owner-authored `rough:` value; `no` means say nothing. A person in several groups gets the highest granted level, ordered `no < rough < full`.
 - `status: suggested` facts never leave.
 - `peers/` and `notes/` never leave.
-- After disclosing, the agent records it: `doss log --record --to <who> --shared <topic>`. The ledger (one append-only file per device under `ledger/`, merged by `doss log`) is the owner's "who knows what about me". It records; it is not the disclosure gate.
+- If a verified requester is not in any group, the agent asks the owner which existing or new group should contain that verified id. Until the owner answers and `policy.yaml` is updated, disclose nothing.
+- After disclosing, the agent records it: `doss log --record --to <verified-id> --shared <topic> --level <rough|full>`. The ledger (one append-only JSONL file per device under `ledger/`, merged by `doss log`) is the owner's "who knows what about me". It records; it is not the disclosure gate.
 
 `doss log` is only the after-the-fact ledger. It does not decide whether a fact may leave, and a log entry is never permission. The sequence is: verify the requester, apply `policy.yaml`, answer only what is allowed, then log what was disclosed.
 
 Honest bounds:
 
 - **This is discipline, not a wall, when the agent has raw vault access.** An agent that can `grep` the vault could bypass the rules. The hard guarantee only holds when the outward-facing agent has NO raw access and reaches owner info solely through a serving layer that applies the policy — a deployment choice (e.g. a hosted front desk), not something a local command can enforce.
-- **The ledger is best-effort.** A disciplined agent records disclosures; a forgetful one leaves gaps. It's an honest audit aid, not a tamper-proof log.
+- **The ledger is best-effort but validated.** A disciplined agent records disclosures with `rough`/`full`; `doss check` validates the JSONL shape. A forgetful agent still leaves gaps, so this is an honest audit aid, not a tamper-proof log.
 - **Default-deny limits the blast radius.** The safe direction is baked in: unknown requester, unlisted folder, or forgotten rule all resolve to "share nothing".
 
 ## Local Access Is Different

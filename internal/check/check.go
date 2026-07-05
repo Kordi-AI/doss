@@ -5,6 +5,7 @@ package check
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -39,11 +40,12 @@ func (i Issue) String() string {
 }
 
 var (
-	nameRe = regexp.MustCompile(`^[a-z0-9._-]+$`)
+	nameRe     = regexp.MustCompile(`^[a-z0-9._-]+$`)
+	identityRe = regexp.MustCompile(`^[a-z][a-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._@-]*$`)
 
 	rootAllowed = map[string]bool{
 		"self": true, "peers": true, "notes": true,
-		"policy.yaml": true, "INSTRUCTION.md": true, "SKILL.md": true, "README.md": true,
+		"policy.yaml": true, "INSTRUCTION.md": true, "CONTENT.md": true, "DISCLOSURE.md": true, "README.md": true,
 		"ledger": true, "ledger.log": true, "local": true, ".git": true, ".gitignore": true, ".index": true,
 	}
 	allowedKeys = map[string]bool{
@@ -108,6 +110,7 @@ func Vault(dir string) ([]Issue, error) {
 
 	issues = append(issues, checkPolicy(dir)...)
 	issues = append(issues, checkAccess(dir)...)
+	issues = append(issues, checkLedger(dir)...)
 	return issues, nil
 }
 
@@ -125,9 +128,13 @@ func Files(dir string, files []string) ([]Issue, error) {
 			}
 		case f == filepath.ToSlash(filepath.Join("local", "access.yaml")):
 			issues = append(issues, checkAccess(dir)...)
+		case strings.HasPrefix(f, "ledger/") || f == "ledger.log":
+			if _, err := os.Stat(filepath.Join(dir, f)); err == nil {
+				issues = append(issues, checkLedgerFile(dir, f)...)
+			}
 		case strings.HasPrefix(f, "local/"),
-			f == "INSTRUCTION.md", f == "SKILL.md", f == "README.md",
-			f == ".gitignore", f == "ledger.log":
+			f == "INSTRUCTION.md", f == "CONTENT.md", f == "DISCLOSURE.md", f == "README.md",
+			f == ".gitignore":
 			// exempt
 		default:
 			issues = append(issues, Issue{File: f, Code: "E_LAYOUT",
@@ -303,6 +310,20 @@ func checkPolicy(dir string) []Issue {
 			Msg: "invalid YAML: " + yamlMsg(err)}}
 	}
 	var issues []Issue
+	for g, members := range p.Groups {
+		if !nameRe.MatchString(g) {
+			issues = append(issues, Issue{File: rel, Code: "E_POLICY",
+				Msg:  fmt.Sprintf("group name %q must be lowercase [a-z0-9._-]", g),
+				Hint: "use a stable group key, e.g. friends or work_contacts"})
+		}
+		for _, member := range members {
+			if !identityRe.MatchString(member) {
+				issues = append(issues, Issue{File: rel, Code: "E_POLICY",
+					Msg:  fmt.Sprintf("group %q has invalid member id %q", g, member),
+					Hint: "use platform-verified ids in platform:id form, e.g. kordi:pedro"})
+			}
+		}
+	}
 	// Every group granted access in can-see must be defined in groups, and each
 	// grant must say whether that group gets no, rough, or full disclosure.
 	for g, raw := range p.CanSee {
@@ -334,6 +355,92 @@ func checkPolicy(dir string) []Issue {
 					Msg:  fmt.Sprintf("can-see.%s.%s has invalid level %q", g, topic, level),
 					Hint: "level must be: no, rough, or full"})
 			}
+		}
+	}
+	return issues
+}
+
+func checkLedger(dir string) []Issue {
+	var issues []Issue
+	if _, err := os.Stat(filepath.Join(dir, "ledger.log")); err == nil {
+		issues = append(issues, checkLedgerFile(dir, "ledger.log")...)
+	}
+	root := filepath.Join(dir, "ledger")
+	_ = filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
+		if err != nil || e.IsDir() {
+			return nil
+		}
+		rel, _ := filepath.Rel(dir, p)
+		issues = append(issues, checkLedgerFile(dir, filepath.ToSlash(rel))...)
+		return nil
+	})
+	return issues
+}
+
+func checkLedgerFile(dir, rel string) []Issue {
+	var issues []Issue
+	base := filepath.Base(rel)
+	if !strings.HasSuffix(base, ".log") || !nameRe.MatchString(strings.TrimSuffix(base, ".log")) {
+		issues = append(issues, Issue{File: rel, Code: "E_LEDGER",
+			Msg:  "ledger files must be named <device>.log",
+			Hint: "use `doss log --record`; do not hand-write ledger filenames"})
+	}
+	b, err := os.ReadFile(filepath.Join(dir, rel))
+	if err != nil {
+		return append(issues, Issue{File: rel, Code: "E_READ", Msg: err.Error()})
+	}
+	lines := strings.Split(string(b), "\n")
+	for i, ln := range lines {
+		if strings.TrimSpace(ln) == "" {
+			continue
+		}
+		var raw map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(ln), &raw); err != nil || raw == nil {
+			issues = append(issues, Issue{File: rel, Line: i + 1, Code: "E_LEDGER",
+				Msg:  "ledger line must be a JSON object",
+				Hint: "record disclosures with `doss log --record --to ... --shared ... --level rough|full`"})
+			continue
+		}
+		var e struct {
+			Ts     string `json:"ts"`
+			To     string `json:"to"`
+			Shared string `json:"shared"`
+			Level  string `json:"level"`
+			Note   string `json:"note"`
+		}
+		if err := json.Unmarshal([]byte(ln), &e); err != nil {
+			issues = append(issues, Issue{File: rel, Line: i + 1, Code: "E_LEDGER",
+				Msg:  "ledger line must be JSON object",
+				Hint: "record disclosures with `doss log --record --to ... --shared ... --level rough|full`"})
+			continue
+		}
+		switch {
+		case e.Ts == "":
+			issues = append(issues, Issue{File: rel, Line: i + 1, Code: "E_LEDGER", Msg: "ledger entry missing ts"})
+		case e.To == "":
+			issues = append(issues, Issue{File: rel, Line: i + 1, Code: "E_LEDGER", Msg: "ledger entry missing to"})
+		case e.Shared == "":
+			issues = append(issues, Issue{File: rel, Line: i + 1, Code: "E_LEDGER", Msg: "ledger entry missing shared"})
+		case e.Level != "rough" && e.Level != "full":
+			issues = append(issues, Issue{File: rel, Line: i + 1, Code: "E_LEDGER",
+				Msg:  fmt.Sprintf("ledger entry has invalid level %q", e.Level),
+				Hint: "level must be rough or full"})
+		}
+		if e.Ts != "" {
+			if _, err := time.Parse(time.RFC3339, e.Ts); err != nil {
+				issues = append(issues, Issue{File: rel, Line: i + 1, Code: "E_LEDGER",
+					Msg: "ledger ts must be RFC3339"})
+			}
+		}
+		if e.To != "" && !identityRe.MatchString(e.To) {
+			issues = append(issues, Issue{File: rel, Line: i + 1, Code: "E_LEDGER",
+				Msg:  fmt.Sprintf("ledger to has invalid requester id %q", e.To),
+				Hint: "use platform-verified ids in platform:id form, e.g. kordi:pedro"})
+		}
+		if e.Shared != "" && !validPolicyTopic(e.Shared) {
+			issues = append(issues, Issue{File: rel, Line: i + 1, Code: "E_LEDGER",
+				Msg:  fmt.Sprintf("ledger shared has invalid topic %q", e.Shared),
+				Hint: "use a relative path under self/ without the self/ prefix, e.g. profile/address"})
 		}
 	}
 	return issues

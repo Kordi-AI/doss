@@ -133,10 +133,44 @@ func TestDossSectionDoesNotMentionAnswerCommand(t *testing.T) {
 	if !strings.Contains(section, "doss log --record") {
 		t.Fatalf("managed section should tell agents to record disclosures:\n%s", section)
 	}
+	if !strings.Contains(section, "--level rough|full") {
+		t.Fatalf("managed section should tell agents to record disclosure level:\n%s", section)
+	}
+	if !strings.Contains(section, "CONTENT.md") || !strings.Contains(section, "DISCLOSURE.md") {
+		t.Fatalf("managed section should mention split instruction files:\n%s", section)
+	}
 	if !strings.Contains(section, "unless `policy.yaml` explicitly permits it") {
 		t.Fatalf("managed section should allow only policy-permitted outbound disclosure:\n%s", section)
 	}
-	if !strings.Contains(section, "INSTRUCTION.md") || strings.Contains(section, "SKILL.md") {
+	if !strings.Contains(section, "INSTRUCTION.md") {
 		t.Fatalf("managed section should point agents at INSTRUCTION.md:\n%s", section)
+	}
+}
+
+func TestLogRequiresAndRecordsDisclosureLevel(t *testing.T) {
+	dir := initTestVault(t)
+	t.Setenv("DOSS_HOME", dir)
+
+	if err := cmdLog([]string{"--record", "--to", "kordi:pedro", "--shared", "profile/address"}); err == nil {
+		t.Fatal("log --record should require --level")
+	}
+	if err := cmdLog([]string{"--record", "--to", "Pedro", "--shared", "profile/address", "--level", "rough"}); err == nil {
+		t.Fatal("log --record should reject unverified display-name recipients")
+	}
+	if err := cmdLog([]string{"--record", "--to", "kordi:pedro", "--shared", "self/profile/address", "--level", "rough"}); err == nil {
+		t.Fatal("log --record should reject shared topics with self/ prefix")
+	}
+	if err := cmdLog([]string{"--record", "--to", "kordi:pedro", "--shared", "profile/address", "--level", "rough"}); err != nil {
+		t.Fatal(err)
+	}
+	entries, _, err := readLedger(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 ledger entry, got %d", len(entries))
+	}
+	if entries[0].Level != "rough" || entries[0].Shared != "profile/address" || entries[0].To != "kordi:pedro" {
+		t.Fatalf("ledger entry not recorded correctly: %+v", entries[0])
 	}
 }

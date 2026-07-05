@@ -172,6 +172,18 @@ func TestCheckPolicy(t *testing.T) {
 	}
 
 	write(t, filepath.Join(dir, "policy.yaml"),
+		"groups:\n  friends: [Pedro]\ncan-see: {}\n")
+	if issues := checkPolicy(dir); !hasCode(issues, "E_POLICY") {
+		t.Errorf("display-name policy members should fail with E_POLICY, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "policy.yaml"),
+		"groups:\n  Friends: [kordi:pedro]\ncan-see: {}\n")
+	if issues := checkPolicy(dir); !hasCode(issues, "E_POLICY") {
+		t.Errorf("non-normalized group names should fail with E_POLICY, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "policy.yaml"),
 		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends: [profile]\n")
 	if issues := checkPolicy(dir); !hasCode(issues, "E_POLICY") {
 		t.Errorf("legacy folder list should fail with E_POLICY, got %v", issues)
@@ -239,6 +251,50 @@ func TestFilesChecksLocalAccessConsistently(t *testing.T) {
 	}
 	if !hasCode(issues, "E_ACCESS") {
 		t.Fatalf("expected local/access.yaml E_ACCESS from Vault, got %v", issues)
+	}
+}
+
+func TestCheckLedger(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "policy.yaml"), "groups: {}\ncan-see: {}\n")
+	valid := `{"ts":"2026-07-05T12:00:00Z","to":"kordi:pedro","shared":"profile/address","level":"rough","note":"test"}` + "\n"
+	write(t, filepath.Join(dir, "ledger", "device-1.log"), valid)
+	if issues, err := Vault(dir); err != nil {
+		t.Fatal(err)
+	} else if hasCode(issues, "E_LEDGER") {
+		t.Fatalf("valid ledger should pass, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "ledger", "device-1.log"),
+		`{"ts":"2026-07-05T12:00:00Z","to":"kordi:pedro","shared":"profile/address"}`+"\n")
+	if issues, err := Vault(dir); err != nil {
+		t.Fatal(err)
+	} else if !hasCode(issues, "E_LEDGER") {
+		t.Fatalf("ledger entry missing level should fail, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "ledger", "device-1.log"),
+		`{"ts":"2026-07-05T12:00:00Z","to":"Pedro","shared":"self/profile/address","level":"rough"}`+"\n")
+	if issues, err := Vault(dir); err != nil {
+		t.Fatal(err)
+	} else if !hasCode(issues, "E_LEDGER") {
+		t.Fatalf("ledger entry with display-name recipient and self/ topic should fail, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "ledger", "device-1.log"), "null\n")
+	if issues, err := Vault(dir); err != nil {
+		t.Fatal(err)
+	} else if !hasCode(issues, "E_LEDGER") {
+		t.Fatalf("ledger entry must be a JSON object, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "ledger", "device-1.log"), "{bad json}\n")
+	issues, err := Files(dir, []string{filepath.ToSlash(filepath.Join("ledger", "device-1.log"))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasCode(issues, "E_LEDGER") {
+		t.Fatalf("changed ledger file should be checked, got %v", issues)
 	}
 }
 
