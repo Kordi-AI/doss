@@ -175,6 +175,11 @@ func checkFile(dir, rel string) []Issue {
 		issues = append(issues, checkFrontmatter(rel, fm)...)
 	} else {
 		body = b
+		if strings.HasPrefix(rel, "self/") {
+			issues = append(issues, Issue{File: rel, Code: "E_ROUGH",
+				Msg:  "self facts need a rough value",
+				Hint: `add frontmatter with a shareable coarse version, e.g. rough: "Toronto"`})
+		}
 	}
 	if strings.TrimSpace(string(body)) == "" {
 		issues = append(issues, Issue{File: rel, Code: "E_EMPTY",
@@ -259,11 +264,22 @@ func checkFrontmatter(rel string, fm []byte) []Issue {
 					Msg: "evidence must be a string"})
 			}
 		case "rough":
-			if _, ok := v.(string); !ok {
+			if s, ok := v.(string); !ok {
 				issues = append(issues, Issue{File: rel, Code: "E_VALUE",
 					Msg:  "rough must be a string",
 					Hint: `the blurred version of this fact, e.g. rough: "Shanghai" for a street address`})
+			} else if strings.TrimSpace(s) == "" {
+				issues = append(issues, Issue{File: rel, Code: "E_ROUGH",
+					Msg:  "rough cannot be empty",
+					Hint: `write the safest shareable coarse version, e.g. rough: "Toronto"`})
 			}
+		}
+	}
+	if strings.HasPrefix(rel, "self/") {
+		if _, ok := m["rough"]; !ok {
+			issues = append(issues, Issue{File: rel, Code: "E_ROUGH",
+				Msg:  "self facts need a rough value",
+				Hint: `add rough: "..." to frontmatter so rough-level disclosure never requires model guessing`})
 		}
 	}
 	// Inferred facts must stay suggestions until confirmed.

@@ -107,7 +107,7 @@ func TestSyncUsesCurrentBranchWhenNoUpstream(t *testing.T) {
 	runGit(t, dir, "remote", "add", "origin", remote)
 
 	profile := filepath.Join(dir, "self", "profile.md")
-	if err := os.WriteFile(profile, []byte("Prefers concise updates.\n"), 0o644); err != nil {
+	if err := os.WriteFile(profile, []byte("---\nrough: \"concise updates\"\n---\nPrefers concise updates.\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := cmdSync([]string{"--quiet"}); err != nil {

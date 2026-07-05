@@ -27,7 +27,7 @@ One binary (`doss`), git underneath, no database, no server.
   SKILL.md       # the one-pager agents follow
 ```
 
-A fact file is markdown with optional YAML frontmatter. All fields are optional; git records time:
+A fact file is markdown with YAML frontmatter. Every `self/**/*.md` fact must include a non-empty `rough` value so rough-level disclosure never requires model guessing. Other fields are optional; git records time:
 
 | Field | Values | Meaning |
 | --- | --- | --- |

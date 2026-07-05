@@ -8,7 +8,7 @@ You manage this folder as your owner's long-term memory. It is plain files. Foll
 - Something another person shared → `peers/<who>/…` (e.g. `peers/kordi-pedro/team.md`).
 - Your own guess or anything unconfirmed → add frontmatter `source: inferred` and `status: suggested`, or park it in `notes/`.
 - **Reconcile as you write — don't pile up.** Before writing, check whether that topic's file already exists. If so, edit it in place: update the value if it changed, replace it if the new info supersedes the old, or leave it if nothing's new. Never create `dietary-2.md` / `dietary-new.md` — one topic, one file. Doing this at write time (while you're already on the topic) keeps the vault clean, so cleanup rarely needs a separate pass.
-- Frontmatter is OPTIONAL. Valid keys: `source` (owner|imported|inferred|peer), `status` (active|suggested), `confidence` (high|medium|low or 0–1), `tags`, `verify_by` (YYYY-MM-DD), `evidence`, `rough`. No timestamps needed — git records time.
+- Every markdown fact under `self/` MUST include frontmatter with a non-empty `rough` value: the safest shareable coarse version of the fact. Other frontmatter is optional. Valid keys: `source` (owner|imported|inferred|peer), `status` (active|suggested), `confidence` (high|medium|low or 0–1), `tags`, `verify_by` (YYYY-MM-DD), `evidence`, `rough`. No timestamps needed — git records time.
 
 ## Recall (read)
 

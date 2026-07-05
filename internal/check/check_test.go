@@ -45,7 +45,7 @@ func TestFrontmatter(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			issues := checkFrontmatter("self/x.md", []byte(c.fm))
+			issues := checkFrontmatter("peers/x.md", []byte(c.fm))
 			if c.code == "" {
 				if len(issues) != 0 {
 					t.Fatalf("expected clean, got %v", issues)
@@ -61,7 +61,7 @@ func TestFrontmatter(t *testing.T) {
 
 func TestVaultCleanAndProblems(t *testing.T) {
 	dir := t.TempDir()
-	write(t, filepath.Join(dir, "self", "profile", "dietary.md"), "- peanuts\n")
+	write(t, filepath.Join(dir, "self", "profile", "dietary.md"), "---\nrough: \"peanut allergy\"\n---\n- peanuts\n")
 	write(t, filepath.Join(dir, "policy.yaml"),
 		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends: [profile]\n")
 
@@ -81,6 +81,49 @@ func TestVaultCleanAndProblems(t *testing.T) {
 	for _, want := range []string{"E_NAME", "E_EMPTY", "E_LAYOUT"} {
 		if !hasCode(issues, want) {
 			t.Errorf("expected %s, got %v", want, issues)
+		}
+	}
+}
+
+func TestSelfMarkdownRequiresRough(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "policy.yaml"), "groups: {}\ncan-see: {}\n")
+
+	write(t, filepath.Join(dir, "self", "profile", "address.md"), "123 King St W\n")
+	issues, err := Vault(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasCode(issues, "E_ROUGH") {
+		t.Fatalf("self markdown without frontmatter rough should fail, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "self", "profile", "address.md"), "---\nsource: owner\n---\n123 King St W\n")
+	issues, err = Vault(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasCode(issues, "E_ROUGH") {
+		t.Fatalf("self markdown frontmatter without rough should fail, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "self", "profile", "address.md"), "---\nrough: \"Toronto\"\n---\n123 King St W\n")
+	issues, err = Vault(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasCode(issues, "E_ROUGH") {
+		t.Fatalf("self markdown with rough should pass rough check, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "peers", "kordi-pedro", "team.md"), "Pedro likes async updates.\n")
+	issues, err = Vault(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, is := range issues {
+		if is.File == filepath.Join("peers", "kordi-pedro", "team.md") && is.Code == "E_ROUGH" {
+			t.Fatalf("peers markdown should not require rough, got %v", issues)
 		}
 	}
 }
