@@ -3,17 +3,17 @@
 [![Documentation](https://img.shields.io/badge/Documentation-doss-000?style=flat&logo=vercel&logoColor=white)](https://doss-docs-git-doss-docs-shenzhe-zhus-projects.vercel.app)
 [![Release](https://img.shields.io/github/v/release/Kordi-AI/doss?style=flat&color=000)](https://github.com/Kordi-AI/doss/releases)
 
-> Plain-file memory for AI agents, synced with git, with default-deny rules for what can leave.
+> A user-owned, cross-platform vault for long-term personal preferences, synced across devices with owner-controlled public disclosure.
 
-Doss creates a vault at `~/.doss`. Agents remember by editing files and recall by
-reading or searching those files. The CLI handles setup, validation, sync, agent
-wiring, and disclosure logs.
+Doss gives the user one durable preference library at `~/.doss`. Agents read and
+update it as plain files, while the CLI handles setup, validation, sync, agent
+wiring, and policy-backed disclosure controls and logs.
 
 ## At a Glance
 
 | Concern | Where it lives | What it does |
 | --- | --- | --- |
-| Memory | `~/.doss/self/`, `peers/`, `notes/` | Stores facts and notes as markdown/yaml files. |
+| Preference vault | `~/.doss/self/`, `peers/`, `notes/` | Stores long-term preferences, facts, and notes as markdown/yaml files. |
 | Agent rules | `~/.doss/SKILL.md` | Tells agents how to read, write, check, sync, and disclose. |
 | Disclosure policy | `~/.doss/policy.yaml` | Maps groups of people to the owner folders they may see. Default: deny. |
 | Local access policy | `~/.doss/local/access.yaml` | Device-local rules for what non-owners may ask this machine to read or edit. |
