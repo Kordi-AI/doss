@@ -32,6 +32,19 @@ func HasRemote(dir string) bool {
 	return err == nil
 }
 
+// LastCommitUnix returns the Unix time of the most recent commit touching
+// relpath, or 0 if the file has no commit yet (brand new / uncommitted).
+// Commit time survives clones; filesystem mtime does not.
+func LastCommitUnix(dir, relpath string) int64 {
+	out, err := Run(dir, "log", "-1", "--format=%ct", "--", relpath)
+	if err != nil {
+		return 0
+	}
+	var t int64
+	fmt.Sscanf(strings.TrimSpace(out), "%d", &t)
+	return t
+}
+
 // ChangedFiles lists files modified since HEAD plus untracked files,
 // relative to the repo root.
 func ChangedFiles(dir string) ([]string, error) {

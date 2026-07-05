@@ -80,7 +80,7 @@ func hookStop() error {
 	// tidy nudge piggybacks here (once per session) even when nothing changed.
 	defer func() {
 		if n := gatherDirt(d, 0); n.due() {
-			fmt.Fprintf(os.Stderr, "tidy due (%s) — run `doss tidy` and clear a small batch\n", n.summary())
+			fmt.Fprintln(os.Stderr, n.nudge())
 		}
 	}()
 

@@ -49,7 +49,7 @@ func cmdCheck(args []string) error {
 		// The dirt-threshold nudge: maintenance piggybacks on a moment
 		// the agent is already awake, like allocation-triggered GC.
 		if d := gatherDirt(dv, 0); d.due() {
-			fmt.Printf("tidy due (%s) — run `doss tidy` and clear a small batch\n", d.summary())
+			fmt.Println(d.nudge())
 		}
 		return nil
 	}

@@ -41,19 +41,12 @@ func cmdDoctor(args []string) error {
 
 	// Vault stats.
 	counts := map[string]int{}
-	stale := 0
-	now := time.Now()
 	for _, area := range []string{"self", "peers", "notes"} {
 		_ = filepath.WalkDir(filepath.Join(vd, area), func(_ string, e fs.DirEntry, err error) error {
 			if err != nil || e.IsDir() || strings.HasPrefix(e.Name(), ".") {
 				return nil
 			}
 			counts[area]++
-			if area != "notes" {
-				if info, err := e.Info(); err == nil && now.Sub(info.ModTime()) > staleAfter {
-					stale++
-				}
-			}
 			return nil
 		})
 	}
@@ -89,21 +82,16 @@ func cmdDoctor(args []string) error {
 
 	printWiring(&problems, fix)
 
-	// Tidy hints.
-	var due []string
-	if len(issues) > 0 {
-		due = append(due, fmt.Sprintf("fix %d check problem(s)", len(issues)))
+	// Tidy hints (same logic as `doss tidy`; staleness is informational only).
+	d := gatherDirt(vd, len(issues))
+	staleNote := ""
+	if len(d.stale) > 0 {
+		staleNote = fmt.Sprintf(" · %d possibly out of date", len(d.stale))
 	}
-	if stale >= 10 {
-		due = append(due, fmt.Sprintf("review %d stale file(s)", stale))
-	}
-	if counts["notes"] >= 50 {
-		due = append(due, fmt.Sprintf("triage %d notes", counts["notes"]))
-	}
-	if len(due) > 0 {
-		fmt.Printf("tidy:    due — %s\n", strings.Join(due, "; "))
+	if d.due() {
+		fmt.Printf("tidy:    %s%s\n", strings.TrimPrefix(d.nudge(), "tidy: "), staleNote)
 	} else {
-		fmt.Printf("tidy:    not needed (%d stale)\n", stale)
+		fmt.Printf("tidy:    nothing urgent%s\n", staleNote)
 	}
 
 	return finish(problems)
