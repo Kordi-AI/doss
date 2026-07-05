@@ -1,7 +1,10 @@
 # doss
 
 [![Documentation](https://img.shields.io/badge/Documentation-doss-000?style=flat&logo=vercel&logoColor=white)](https://doss-docs-git-doss-docs-shenzhe-zhus-projects.vercel.app)
-[![Release](https://img.shields.io/github/v/release/Kordi-AI/doss?style=flat&color=000)](https://github.com/Kordi-AI/doss/releases)
+[![Test](https://img.shields.io/github/actions/workflow/status/Kordi-AI/doss/test.yml?branch=main&label=test&style=flat&color=2f855a)](https://github.com/Kordi-AI/doss/actions/workflows/test.yml)
+[![Release](https://img.shields.io/github/v/release/Kordi-AI/doss?style=flat&color=7c3aed)](https://github.com/Kordi-AI/doss/releases)
+[![Go](https://img.shields.io/github/go-mod/go-version/Kordi-AI/doss?style=flat&color=00ADD8)](go.mod)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-f97316?style=flat)](install.sh)
 
 > A user-owned, cross-platform vault for long-term personal preferences, synced across devices with owner-controlled public disclosure.
 
