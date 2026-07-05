@@ -1,0 +1,35 @@
+# Commands
+
+`doss <command> [flags]` · vault location: `$DOSS_HOME`, default `~/.doss`
+
+| Command | What it does |
+| --- | --- |
+| `doss init` | Create a vault, or `--from owner/repo` to attach another device. `--github` also creates a private cloud repo; `--git-name` / `--git-email` set the commit identity. Auto-runs `connect`. |
+| `doss connect` | Wire the vault into every installed agent's global config. `--file <path>` for an unknown agent; `--remove` to undo. |
+| `doss check` | Validate memory files; bad writes bounce with precise, fixable errors. `--changed` checks only files touched since the last commit. |
+| `doss sync` | Commit + pull + push. Only validated state ever leaves; conflicts abort safely. |
+| `doss doctor` | Full health: vault stats, sync state, agent wiring, hooks, tidy hints. `--fix` repairs wiring. Alias: `status`. |
+| `doss tidy` | What needs your judgment: stale facts, unconfirmed guesses, notes backlog. Read-only. |
+| `doss log` | `--record --to <who> --shared <what>` notes a disclosure; plain `doss log` reads "who knows what about me" across all devices. |
+| `doss uninstall` | Delete the local vault and unwire agents (safe when a cloud copy exists; refuses otherwise unless `--force`). |
+| `doss hook` | Harness hook endpoint (`post-edit`, `stop`) — wired by `connect`, never run by hand. |
+
+## Who runs what
+
+- **Agents, automatically** — `check` (via hooks after edits), `sync` (at session end).
+- **Agents, when acting for others** — `log --record` after a disclosure.
+- **You** — `init`, `doctor`, `tidy`, `uninstall`, and editing `policy.yaml` / `local/access.yaml`.
+
+## Frontmatter fields
+
+Optional, on any fact file:
+
+| Field | Values | Meaning |
+| --- | --- | --- |
+| `source` | owner / imported / inferred / peer | where it came from |
+| `status` | active / suggested | suggested = an unconfirmed guess; never disclosed |
+| `confidence` | high / medium / low, or 0–1 | how sure |
+| `tags` | list of strings | free grouping |
+| `verify_by` | YYYY-MM-DD | freshness contract; past due → `tidy` lists it |
+| `evidence` | string | where this was learned |
+| `public_value` | string | the shareable version (e.g. a city for an address) |

@@ -1,0 +1,37 @@
+import { Callout } from 'nextra/components'
+
+# Doss
+
+**A synced memory folder your agents read and write as plain files — with rules, in a file, for what may leave.**
+
+_Doss_ is short for _dossier_ — the file you keep on someone. Here it's the file **you** keep on **yourself**: one place that holds who you are, that you own, and that decides for itself how much of you the outside world gets to see.
+
+## The idea in one screen
+
+- **For your agent** — long-term memory as plain md/yaml files. Remember = write a file, recall = read a file. Zero ceremony.
+- **For everyone else** — `policy.yaml` says which groups of people may see which folders of your info (default: **nothing**). Your agent reads it, shares only what's granted, and logs each disclosure.
+- **The other side installs nothing.** Useful at n=1 (multi-device memory + disclosure discipline); upgrades when both sides run it.
+
+<Callout type="info">
+  One vault per machine, synced across your devices with git. Your agents work
+  with plain files on the hot path; a small CLI handles validation, sync,
+  disclosure rules, and the audit log.
+</Callout>
+
+## Why plain files
+
+Coding agents are already fluent in `ls`, `grep`, and editing files. Doss meets them there instead of behind a heavyweight tool API: reading and writing memory is ordinary file I/O, always. The rules for what may leave live in files too — the agent reads them like any other file.
+
+## Where to go next
+
+- [Getting started](/getting-started) — install and set up your vault
+- [Concepts](/concepts) — the vault, disclosure, device access, multi-device
+- [Commands](/commands) — the full CLI reference
+- [How it works](/how-it-works) — the detailed mechanics and failure modes
+
+<Callout type="warning">
+  Doss is v0. On a machine where the agent can read your files directly, the
+  disclosure rules are **discipline plus an audit log**, not a hard wall. The
+  hard guarantee needs a serving layer with no raw vault access. See
+  [How it works](/how-it-works#honest-bounds).
+</Callout>

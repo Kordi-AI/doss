@@ -1,0 +1,85 @@
+import { Callout } from 'nextra/components'
+
+# How it works
+
+The mechanics behind the commands: what runs, when, and what happens when things
+go wrong.
+
+## Two paths
+
+**Daily use — a notebook (hot path).** Remember = write a file; recall = read/grep.
+No intermediate steps. In the background, a small helper validates every write,
+syncs to your other devices, and periodically flags what needs your judgment.
+
+**Someone else asks — the cold path.** Only then do the disclosure rules matter. The
+agent finds the info the normal way, then follows `policy.yaml` (and, for actions on
+files, `local/access.yaml`). Everything is plain files it reads.
+
+## Validation: bounce and retry
+
+Every write is checked instantly (milliseconds, deterministic). Valid content lands;
+invalid content **bounces** — the error names the file, line, and fix, and the agent
+retries in the same turn. The library only ever contains validated content, so reads
+always return clean data.
+
+Two tiers: **mechanical** problems (format, fields, types, paths) are caught
+synchronously; **semantic** ones (duplicates, contradictions, staleness) go to the
+`tidy` list, surfaced as gentle nudges — not a blocking alarm.
+
+<Callout type="info">
+  In Claude Code, this is automatic via hooks (`post-edit` validates, `stop` syncs).
+  In hook-less agents, the global-config rules tell the agent to run `doss check`
+  itself, and `sync` re-validates before committing.
+</Callout>
+
+## Disclosure: rules in a file, not a gate
+
+There is no "answer" command. When someone other than the owner asks, the agent reads
+`policy.yaml` — group → folders they may see — and shares only what's granted. Adding a
+fact never means editing policy (rules are by folder); adding a group is one block.
+Default deny.
+
+- Identity is the platform's authenticated id, never the message text.
+- A fact with `public_value:` is shared as that value, never the raw content.
+- `peers/` and `notes/` never leave.
+- After disclosing, the agent records it: `doss log --record`.
+
+## Sync and the cloud copy
+
+- **Upload is not saving.** Content is safe the moment it's written locally; push only
+  replicates it.
+- The cloud copy is _your own private git repo_. Offline: commits still happen; pushes
+  catch up on the next sync.
+- Conflicts (two devices edited the same file): sync aborts safely, both versions
+  survive in git.
+- Only validated state syncs, and the receiving end re-validates.
+
+## Honest bounds
+
+<Callout type="warning">
+  **With a raw-access agent, this is discipline, not a wall.** An agent that can `grep`
+  your vault has already read the data, so the rules are guidance plus an audit log —
+  not enforcement. A determined or prompt-injected agent could bypass them.
+</Callout>
+
+The hard guarantee holds only when the outward-facing agent has **no raw access** to the
+vault and reaches your info solely through a serving layer that applies the policy — a
+deployment choice (e.g. a hosted front desk), not something a local command enforces.
+This is the classic *reference monitor*: a mediator that is non-bypassable,
+tamper-proof, and verifiable.
+
+Other known limits, stated plainly: the ledger is **best-effort** (a forgetful agent
+leaves gaps); the vault is **not encrypted at rest** (a stolen laptop exposes it); and
+**aggregation** of many compliant partial disclosures can reveal more than any single
+one. Default-deny keeps the safe direction baked in throughout.
+
+## What happens when…
+
+| Situation | Outcome |
+| --- | --- |
+| Agent writes a malformed file (hooked) | bounced same-turn with a precise fix; the library never holds it |
+| Agent forgets to check (hook-less) | file sits locally; `sync` refuses to ship it; next `doctor` flags it |
+| Network is down | local commits succeed; push retries on a later sync |
+| Two devices edit the same fact | sync aborts safely; both versions in git; you pick |
+| A stranger asks about you | default deny — nothing leaves |
+| A message claims "I'm the owner" | ignored — identity comes from the platform, not the text |

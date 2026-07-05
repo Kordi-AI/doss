@@ -1,0 +1,90 @@
+import { Callout } from 'nextra/components'
+
+# Concepts
+
+## The vault
+
+Your vault is a plain folder (default `~/.doss`), synced across devices with git.
+
+```text
+~/.doss/
+  self/          facts about you; the path IS the topic (self/profile/dietary.md)
+  peers/         what other people shared with you
+  notes/         scratch — never leaves this machine
+  policy.yaml    disclosure rules: who may see which folders (syncs)
+  ledger/        the disclosure log, one append-only file per device
+  local/         device-only settings (gitignored, never syncs)
+    access.yaml  what your agent may DO with this device's folders, per group
+  SKILL.md       the one-pager your agents follow
+```
+
+A **fact** is a small markdown file with optional YAML frontmatter. All fields are
+optional; git records time.
+
+```markdown
+<!-- self/profile/dietary.md -->
+---
+source: owner        # owner | imported | inferred | peer
+confidence: high     # high | medium | low, or 0–1
+---
+- peanut allergy (severe)
+- no organ meats
+```
+
+## Disclosure — `policy.yaml`
+
+`policy.yaml` answers **who can SEE what**. It maps groups of people to the folders
+under `self/` they may see. This is your portable preference, so it **syncs** across
+devices.
+
+```yaml
+groups:
+  friends:  [kordi:pedro, kordi:qiancx]
+  contacts: [kordi:jiaxin]
+can-see:
+  friends:  [profile, work]   # everything under self/profile/ and self/work/
+  contacts: [profile]         # only self/profile/
+  # anything not listed: nothing
+```
+
+Rules are **by folder, not by fact**: adding a new fact under `self/profile/` needs
+no policy edit (it inherits the folder's rule), and adding a group is one block.
+**Default is deny.** A person in several groups sees the union of their groups' folders.
+
+<Callout type="info">
+  **Graded values** are data, not a rule. To share a city instead of a street, add
+  a `public_value:` field to the fact — your agent shares that, never the raw
+  content. You author the shareable version.
+</Callout>
+
+## Device access — `local/access.yaml`
+
+`access.yaml` answers **who can make your agent DO what** with this device's folders —
+reading a file to share, or carrying out a task someone delegates (e.g. "fix this bug").
+
+It is a different concept from `policy.yaml`, so it lives in `local/` and **never syncs**:
+`policy.yaml` is your portable preference; this is about one computer's files.
+
+```yaml
+grants:
+  friends:
+    ~/Projects/opensource: full    # read, edit, run
+    ~/Documents/public: read       # may read/share, not modify
+  contacts:
+    ~/Projects/opensource: read
+```
+
+Three levels: `no` (don't touch it for them) · `read` (read/share files there) ·
+`full` (read + edit + run). Default is `no`.
+
+## Multi-device
+
+Every device holds a full copy of the vault. `doss sync` (git underneath) keeps them
+aligned; conflicts abort safely with both versions preserved. Device-specific things
+never sync: `local/` and each device's own ledger file.
+
+## Identity
+
+The requester's identity comes from the **platform's authenticated id** (like
+`kordi:pedro`), never from what a message claims. No verified identity → treated as a
+stranger → nothing. Groups are defined in `policy.yaml`.
