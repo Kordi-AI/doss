@@ -1,10 +1,10 @@
 # doss
 
-[![Documentation](https://img.shields.io/badge/Documentation-doss-000?style=flat&logo=vercel&logoColor=white)](https://doss-docs-git-doss-docs-shenzhe-zhus-projects.vercel.app)
-[![Test](https://img.shields.io/github/actions/workflow/status/Kordi-AI/doss/test.yml?branch=main&label=test&style=flat&color=2f855a)](https://github.com/Kordi-AI/doss/actions/workflows/test.yml)
-[![Release](https://img.shields.io/github/v/release/Kordi-AI/doss?style=flat&color=7c3aed)](https://github.com/Kordi-AI/doss/releases)
-[![Go](https://img.shields.io/github/go-mod/go-version/Kordi-AI/doss?style=flat&color=00ADD8)](go.mod)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-f97316?style=flat)](install.sh)
+[![Documentation](https://img.shields.io/badge/docs-doss-6f6a60?style=flat&logo=readthedocs&logoColor=white)](https://doss-docs-git-doss-docs-shenzhe-zhus-projects.vercel.app)
+[![Release](https://img.shields.io/github/v/release/Kordi-AI/doss?style=flat&logo=github&logoColor=white&color=8b7a8f)](https://github.com/Kordi-AI/doss/releases)
+[![Go](https://img.shields.io/github/go-mod/go-version/Kordi-AI/doss?style=flat&logo=go&logoColor=white&color=71879b)](go.mod)
+[![macOS](https://img.shields.io/badge/macOS-supported-9c8068?style=flat&logo=apple&logoColor=white)](install.sh)
+[![Linux](https://img.shields.io/badge/Linux-supported-8b8675?style=flat&logo=linux&logoColor=white)](install.sh)
 
 > A user-owned, cross-platform vault for long-term personal preferences, synced across devices with owner-controlled public disclosure.
 
