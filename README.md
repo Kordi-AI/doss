@@ -18,9 +18,11 @@ Status: v0 in development · [Design](docs/design/plan-v0.1.md) · [Roadmap issu
 **Option 1 — do it yourself**
 
 ```sh
-git clone https://github.com/Kordi-AI/doss && cd doss && ./install.sh
+curl -fsSL https://raw.githubusercontent.com/Kordi-AI/doss/main/install.sh | sh
 doss init            # guided setup — just answer the questions
 ```
+
+The installer grabs a prebuilt binary for your OS/arch (macOS/Linux, amd64/arm64), falling back to a source build if you have Go. No prebuilt for your platform? `git clone https://github.com/Kordi-AI/doss && cd doss && ./install.sh`.
 
 Run in a terminal, `doss init` walks you through it: new vault or connect to an existing cloud one · the name/email your vault commits as · whether to back it up to a private GitHub repo (it takes a token if `gh` isn't logged in).
 

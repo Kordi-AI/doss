@@ -1,29 +1,71 @@
 #!/bin/sh
-# Doss installer — builds from source (binary releases come later).
+# Doss installer.
+#   curl -fsSL https://raw.githubusercontent.com/Kordi-AI/doss/main/install.sh | sh
+# Downloads a prebuilt binary for your OS/arch; falls back to building from
+# source (needs Go) when no matching release asset is available.
 set -e
 
-if ! command -v git >/dev/null 2>&1; then
-  echo "doss needs git. install git first." >&2; exit 1
-fi
-if ! command -v go >/dev/null 2>&1; then
-  echo "doss builds with Go (>= 1.22)." >&2
-  echo "  macOS:  brew install go" >&2
-  echo "  linux:  https://go.dev/dl/" >&2
-  exit 1
-fi
-
-cd "$(dirname "$0")"
-echo "building doss..."
-go build -o doss ./cmd/doss
-
+REPO="Kordi-AI/doss"
 BIN_DIR="${DOSS_BIN_DIR:-$HOME/.local/bin}"
-mkdir -p "$BIN_DIR"
-mv doss "$BIN_DIR/doss"
+
+need() { command -v "$1" >/dev/null 2>&1; }
+
+detect() {
+  os=$(uname -s); arch=$(uname -m)
+  case "$os" in
+    Darwin) os=darwin ;;
+    Linux)  os=linux ;;
+    *) echo "unsupported OS: $os (build from source: https://github.com/$REPO)" >&2; exit 1 ;;
+  esac
+  case "$arch" in
+    x86_64|amd64) arch=amd64 ;;
+    arm64|aarch64) arch=arm64 ;;
+    *) echo "unsupported arch: $arch" >&2; exit 1 ;;
+  esac
+  echo "${os}_${arch}"
+}
+
+build_from_source() {
+  need git || { echo "no prebuilt binary and git is missing." >&2; exit 1; }
+  need go  || { echo "no prebuilt binary for your platform, and Go isn't installed to build from source." >&2
+                echo "  macOS: brew install go   linux: https://go.dev/dl/" >&2; exit 1; }
+  tmp=$(mktemp -d)
+  echo "building doss from source..."
+  if [ -f "./cmd/doss/main.go" ]; then
+    go build -o "$tmp/doss" ./cmd/doss
+  else
+    git clone --depth 1 "https://github.com/$REPO" "$tmp/src" >/dev/null 2>&1
+    ( cd "$tmp/src" && go build -o "$tmp/doss" ./cmd/doss )
+  fi
+  mkdir -p "$BIN_DIR"; mv "$tmp/doss" "$BIN_DIR/doss"; rm -rf "$tmp"
+}
+
+install_prebuilt() {
+  plat=$(detect)
+  url="https://github.com/$REPO/releases/latest/download/doss_${plat}"
+  tmp=$(mktemp -d)
+  echo "downloading doss for ${plat}..."
+  if need curl; then
+    curl -fsSL "$url" -o "$tmp/doss" 2>/dev/null || return 1
+  elif need wget; then
+    wget -qO "$tmp/doss" "$url" 2>/dev/null || return 1
+  else
+    return 1
+  fi
+  [ -s "$tmp/doss" ] || return 1
+  chmod +x "$tmp/doss"
+  mkdir -p "$BIN_DIR"; mv "$tmp/doss" "$BIN_DIR/doss"; rm -rf "$tmp"
+}
+
+if ! install_prebuilt; then
+  echo "no prebuilt binary available — falling back to source build"
+  build_from_source
+fi
 
 echo "✓ installed: $BIN_DIR/doss"
 case ":$PATH:" in
   *":$BIN_DIR:"*) ;;
   *) echo "  note: add $BIN_DIR to your PATH" ;;
 esac
-echo "next: doss init          (local only)"
-echo "      doss init --github (with a private GitHub repo as the cloud copy)"
+echo "next: doss init          (guided setup)"
+echo "      doss init --github  (with a private GitHub repo as the cloud copy)"
