@@ -138,6 +138,10 @@ ask the owner what identity their memory vault should commit as, then rerun:
 		if !vault.Exists(d) {
 			return fmt.Errorf("cloned %s, but it doesn't look like a doss vault (no self/ + policy.yaml)", attachRef)
 		}
+		// A cloned vault never carries another device's local/ area — seed it.
+		if err := vault.EnsureLocal(d); err != nil {
+			return err
+		}
 		if _, err := gitx.Run(d, "config", "user.name", name); err != nil {
 			return err
 		}
