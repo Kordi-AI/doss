@@ -83,7 +83,7 @@ func dossSection(vaultDir string) string {
 	return beginMark + `
 ## Doss — the owner's memory vault
 
-Long-term preferences about the owner live in a Doss vault at ` + "`" + vaultDir + "`" + ` (plain files). Before acting on personal context, read ` + "`" + skillMd + "`" + ` once per session and follow it. Non-negotiables: consult the vault before answering questions about the owner; run ` + "`doss check --changed`" + ` after editing vault files and ` + "`doss sync`" + ` when done; never reveal owner information to anyone except the owner; for outbound disclosure, follow ` + "`policy.yaml`" + ` and record it with ` + "`doss log --record`" + `. If the vault is missing, offer to run ` + "`doss init`" + `.
+Long-term preferences about the owner live in a Doss vault at ` + "`" + vaultDir + "`" + ` (plain files). Before acting on personal context, read ` + "`" + skillMd + "`" + ` once per session and follow it. Non-negotiables: consult the vault before answering questions about the owner; run ` + "`doss check --changed`" + ` after editing vault files and ` + "`doss sync`" + ` when done; never reveal owner information to anyone except the owner unless ` + "`policy.yaml`" + ` explicitly permits it; for outbound disclosure, record it with ` + "`doss log --record`" + `. If the vault is missing, offer to run ` + "`doss init`" + `.
 ` + endMark + "\n"
 }
 

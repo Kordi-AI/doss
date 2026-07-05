@@ -63,7 +63,7 @@ func TestVaultCleanAndProblems(t *testing.T) {
 	dir := t.TempDir()
 	write(t, filepath.Join(dir, "self", "profile", "dietary.md"), "---\nrough: \"peanut allergy\"\n---\n- peanuts\n")
 	write(t, filepath.Join(dir, "policy.yaml"),
-		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends: [profile]\n")
+		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends:\n    profile: rough\n")
 
 	issues, err := Vault(dir)
 	if err != nil {
@@ -131,15 +131,33 @@ func TestSelfMarkdownRequiresRough(t *testing.T) {
 func TestCheckPolicy(t *testing.T) {
 	dir := t.TempDir()
 	write(t, filepath.Join(dir, "policy.yaml"),
-		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  freinds: [profile]\n") // typo'd group
+		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  freinds:\n    profile: rough\n") // typo'd group
 	if issues := checkPolicy(dir); !hasCode(issues, "E_POLICY") {
 		t.Errorf("expected E_POLICY for can-see group undefined in groups, got %v", issues)
 	}
 
 	write(t, filepath.Join(dir, "policy.yaml"),
-		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends: [profile]\n")
+		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends:\n    profile: rough\n    profile/dietary: full\n    work: no\n")
 	if issues := checkPolicy(dir); len(issues) != 0 {
 		t.Errorf("valid policy should pass, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "policy.yaml"),
+		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends: [profile]\n")
+	if issues := checkPolicy(dir); !hasCode(issues, "E_POLICY") {
+		t.Errorf("legacy folder list should fail with E_POLICY, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "policy.yaml"),
+		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends:\n    profile: read\n")
+	if issues := checkPolicy(dir); !hasCode(issues, "E_POLICY") {
+		t.Errorf("invalid disclosure level should fail with E_POLICY, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "policy.yaml"),
+		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends:\n    self/profile: rough\n    ../secrets: full\n")
+	if issues := checkPolicy(dir); !hasCode(issues, "E_POLICY") {
+		t.Errorf("invalid policy topic should fail with E_POLICY, got %v", issues)
 	}
 }
 

@@ -108,26 +108,31 @@ A per-agent skills layer was tried and cut: the global file alone proved suffici
 
 There is no special "answer" command. When someone other than the owner asks, the agent finds the info the normal way (`grep`/read) and then follows `policy.yaml` — a plain file of rules it reads like any other.
 
-`policy.yaml` maps **groups of people → folders under `self/` they may see**:
+`policy.yaml` maps **groups of people → disclosure levels for topics under `self/`**:
 
 ```yaml
 groups:
   friends:  [kordi:pedro, kordi:qiancx]
   contacts: [kordi:jiaxin]
 can-see:
-  friends:  [profile, work]   # everything under self/profile/ and self/work/
-  contacts: [profile]         # only self/profile/
-  # anything not listed: nothing
+  friends:
+    profile/address: rough   # share only the fact's owner-written rough value
+    profile/dietary: full    # share the full fact body
+    work: rough              # applies to everything under self/work/
+  contacts:
+    profile/address: rough
+  # anything not listed: no disclosure
 ```
 
-Why by folder and not by fact: adding a new fact under `self/profile/` needs no policy edit (it inherits the folder's rule), and adding a group is one block here — never a per-fact change. Default is deny: unlisted group or folder → nothing leaves.
+Topics are paths without the `self/` prefix. A topic may name a folder (`work`) or a specific fact path (`profile/address`). Folder rules inherit to facts below them, and a more specific topic wins. Default is deny: unlisted group or topic → nothing leaves.
 
 The rules the agent follows:
 
-- A requester sees a fact ONLY if their group is granted that fact's folder. Identity is the platform's **authenticated** id (`kordi:pedro`), never what the message claims. No verified identity → stranger → nothing.
-- Rough values are data, not a command: a fact with `rough: "Toronto"` is shared as "Toronto", never the raw street. The owner authors the shareable version.
+- A requester receives a fact ONLY if their verified group has a `full` or `rough` grant for that fact's topic. Identity is the platform's **authenticated** id (`kordi:pedro`), never what the message claims. No verified identity → stranger → nothing.
+- `full` means share the fact body. `rough` means share ONLY the fact's owner-authored `rough:` value; `no` means say nothing. A person in several groups gets the highest granted level.
+- `status: suggested` facts never leave.
 - `peers/` and `notes/` never leave.
-- After disclosing, the agent records it: `doss log --record --to <who> --shared <topic>`. The ledger (one append-only file per device under `ledger/`, merged by `doss log`) is the owner's "who knows what about me".
+- After disclosing, the agent records it: `doss log --record --to <who> --shared <topic>`. The ledger (one append-only file per device under `ledger/`, merged by `doss log`) is the owner's "who knows what about me". It records; it is not the disclosure gate.
 
 Honest bounds:
 
@@ -174,7 +179,7 @@ It is read-only. You (or your agent) handle a small batch and move on. You don't
 | Network is down | local commits succeed; push retries on a later sync; nothing blocks |
 | The managed section gets deleted | that agent stops discovering the vault; `doss doctor` reports it; `connect` restores it |
 | Two devices edit the same fact | sync aborts safely; both versions in git; you pick |
-| An outsider asks about the owner | the agent follows `policy.yaml` (group → folders, default deny) and shares only what's granted; with a raw-access agent this is discipline, not a wall — the hard guarantee needs a serving layer with no raw vault access |
+| An outsider asks about the owner | the agent follows `policy.yaml` (group → topic → full/rough/no, default deny) and shares only what's granted; with a raw-access agent this is discipline, not a wall — the hard guarantee needs a serving layer with no raw vault access |
 
 ## Design principles (why it's built this way)
 

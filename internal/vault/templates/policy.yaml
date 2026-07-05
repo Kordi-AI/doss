@@ -1,18 +1,23 @@
-# Who can see which categories of my info. Default: nothing (private).
+# Who can receive which version of my info. Default: nothing (private).
 #
-# A category is a folder under self/ (e.g. profile, work). Rules are by folder,
-# not by individual fact — so adding a new fact NEVER means editing this file,
-# and adding a new group is just one block here. Nothing listed = nothing leaves.
+# Topics are paths under self/ without the self/ prefix, e.g. profile/address
+# or work. Folder rules inherit to facts below them; a more specific topic wins.
+# Nothing listed = no disclosure.
 
 groups:
   # friends:  [kordi:pedro, kordi:qiancx]
   # contacts: [kordi:jiaxin]
 
 can-see:
-  # friends:  [profile, work]   # friends see everything under self/profile/ and self/work/
-  # contacts: [profile]         # contacts see only self/profile/
-  # any group or folder not listed here: nothing
+  # friends:
+  #   profile/address: rough   # share only the fact's owner-written rough value
+  #   profile/dietary: full    # share the full fact body
+  #   work: rough              # applies to everything under self/work/
+  # contacts:
+  #   profile/address: rough
+  # any group or topic not listed here: no disclosure
 
-# Rough values (e.g. show a city, not a street) aren't set here — put a
-# `rough:` field on the fact itself, and share that instead of the raw content.
-# Generalization is data you author, not something decided on the fly.
+# Levels:
+#   no    = say nothing (also the default)
+#   rough = share only the fact's rough: value
+#   full  = share the full fact body

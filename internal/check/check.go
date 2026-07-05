@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -49,8 +50,9 @@ var (
 		"source": true, "status": true, "confidence": true,
 		"tags": true, "verify_by": true, "evidence": true, "rough": true,
 	}
-	sourceVals = map[string]bool{"owner": true, "imported": true, "inferred": true, "peer": true}
-	statusVals = map[string]bool{"active": true, "suggested": true}
+	sourceVals       = map[string]bool{"owner": true, "imported": true, "inferred": true, "peer": true}
+	statusVals       = map[string]bool{"active": true, "suggested": true}
+	disclosureLevels = map[string]bool{"no": true, "rough": true, "full": true}
 )
 
 const maxFileSize = 128 * 1024
@@ -302,23 +304,63 @@ func checkPolicy(dir string) []Issue {
 	}
 	var p struct {
 		Groups map[string][]string `yaml:"groups"`
-		CanSee map[string][]string `yaml:"can-see"`
+		CanSee map[string]any      `yaml:"can-see"`
 	}
 	if err := yaml.Unmarshal(b, &p); err != nil {
 		return []Issue{{File: rel, Line: yamlLine(err), Code: "E_YAML",
 			Msg: "invalid YAML: " + yamlMsg(err)}}
 	}
 	var issues []Issue
-	// Every group granted access in can-see must be defined in groups —
-	// catches typos that would otherwise silently grant nothing.
-	for g := range p.CanSee {
+	// Every group granted access in can-see must be defined in groups, and each
+	// grant must say whether that group gets no, rough, or full disclosure.
+	for g, raw := range p.CanSee {
 		if _, ok := p.Groups[g]; !ok {
 			issues = append(issues, Issue{File: rel, Code: "E_POLICY",
 				Msg:  fmt.Sprintf("can-see names group %q, which isn't defined under groups", g),
 				Hint: "define the group's members, or fix the name"})
 		}
+		topics, ok := raw.(map[string]any)
+		if !ok {
+			issues = append(issues, Issue{File: rel, Code: "E_POLICY",
+				Msg:  fmt.Sprintf("can-see.%s must map self topics to disclosure levels", g),
+				Hint: "use topic: full|rough|no, e.g. friends: {profile/address: rough}"})
+			continue
+		}
+		for topic, rawLevel := range topics {
+			if !validPolicyTopic(topic) {
+				issues = append(issues, Issue{File: rel, Code: "E_POLICY",
+					Msg:  fmt.Sprintf("can-see.%s has invalid topic %q", g, topic),
+					Hint: "use a relative path under self/ without the self/ prefix, e.g. profile/address"})
+			}
+			level, ok := rawLevel.(string)
+			if !ok {
+				issues = append(issues, Issue{File: rel, Code: "E_POLICY",
+					Msg:  fmt.Sprintf("can-see.%s.%s level must be a string", g, topic),
+					Hint: "level must be: no, rough, or full"})
+			} else if !disclosureLevels[level] {
+				issues = append(issues, Issue{File: rel, Code: "E_POLICY",
+					Msg:  fmt.Sprintf("can-see.%s.%s has invalid level %q", g, topic, level),
+					Hint: "level must be: no, rough, or full"})
+			}
+		}
 	}
 	return issues
+}
+
+func validPolicyTopic(topic string) bool {
+	if topic == "" || strings.HasPrefix(topic, "/") || strings.HasPrefix(topic, "self/") {
+		return false
+	}
+	clean := path.Clean(topic)
+	if clean != topic || clean == "." || strings.HasPrefix(clean, "../") || clean == ".." {
+		return false
+	}
+	for _, part := range strings.Split(topic, "/") {
+		if part == "" || !nameRe.MatchString(part) {
+			return false
+		}
+	}
+	return true
 }
 
 // policyGroups returns the set of group names defined in policy.yaml.
