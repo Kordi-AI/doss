@@ -78,6 +78,3 @@ outward-facing agent raw vault access.
 ## Docs
 
 - [Documentation site](https://doss-docs-git-doss-docs-shenzhe-zhus-projects.vercel.app)
-- [How it works](docs/how-it-works.md)
-- [Design plan](docs/design/plan-v0.1.md)
-- [Threat model](docs/design/threat-model.md)
