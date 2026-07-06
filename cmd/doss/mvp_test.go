@@ -147,6 +147,35 @@ func TestChangedCheckIncludesGitignoredLocalAccess(t *testing.T) {
 	}
 }
 
+func TestChangedCheckReportsMalformedPolicyEvenWhenOnlySelfChanged(t *testing.T) {
+	dir := initTestVault(t)
+	t.Setenv("DOSS_HOME", dir)
+
+	if err := os.WriteFile(filepath.Join(dir, "policy.yaml"), []byte("groups:\n  friends: [kordi:pedro\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, dir, "add", "policy.yaml")
+	runGit(t, dir, "commit", "-m", "malformed policy baseline")
+
+	profile := filepath.Join(dir, "self", "profile", "address.md")
+	if err := os.MkdirAll(filepath.Dir(profile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(profile, []byte("123 King St W\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := captureStdout(t, func() error {
+		return cmdCheck([]string{"--changed", "--quiet"})
+	})
+	if err == nil {
+		t.Fatal("check --changed should fail when policy.yaml is malformed even if only a self fact changed")
+	}
+	if !strings.Contains(out, "policy.yaml:1 [E_YAML]") {
+		t.Fatalf("check --changed should report the malformed baseline policy, got:\n%s", out)
+	}
+}
+
 func TestSyncUsesCurrentBranchWhenNoUpstream(t *testing.T) {
 	dir := initTestVault(t)
 	t.Setenv("DOSS_HOME", dir)
