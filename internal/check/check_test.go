@@ -158,6 +158,21 @@ func TestSelfMarkdownDoesNotRequireRoughForFullNoOrUnlisted(t *testing.T) {
 	}
 }
 
+func TestCrossGroupRoughGrantRequiresRough(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "policy.yaml"),
+		"groups:\n  close: [kordi:pedro]\n  acquaintances: [kordi:ana]\ncan-see:\n  close:\n    profile/address: full\n  acquaintances:\n    profile/address: rough\n")
+	write(t, filepath.Join(dir, "self", "profile", "address.md"), "123 King St W\n")
+
+	issues, err := Vault(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasIssue(issues, "self/profile/address.md", "E_ROUGH") {
+		t.Fatalf("a rough grant from any group should require rough even when another group gets full, got %v", issues)
+	}
+}
+
 func TestPolicySpecificityControlsRoughRequirement(t *testing.T) {
 	dir := t.TempDir()
 	write(t, filepath.Join(dir, "policy.yaml"),
