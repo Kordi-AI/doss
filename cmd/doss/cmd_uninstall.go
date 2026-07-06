@@ -105,7 +105,7 @@ func cmdUninstall(args []string) error {
 			fmt.Printf("✓ GitHub deploy key revoked: %s\n", id)
 		}
 	} else if hasRemote && !safe && *force {
-		fmt.Println("warning: skipping synced device unregistration because the vault is being force-deleted with unsynced work")
+		fmt.Println("warning: skipping synced device deactivation because the vault is being force-deleted with unsynced work")
 	}
 	if !*keepAgents {
 		if err := cmdConnect([]string{"--remove"}); err != nil {

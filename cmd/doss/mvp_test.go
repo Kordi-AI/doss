@@ -260,6 +260,9 @@ func TestDeactivateAnotherRegisteredDevice(t *testing.T) {
 	if !strings.Contains(string(raw), "status: deactivated") {
 		t.Fatalf("device should be marked deactivated, got:\n%s", raw)
 	}
+	if err := cmdDeactivate([]string{old}); err == nil || !strings.Contains(err.Error(), "already deactivated") {
+		t.Fatalf("deactivate should reject already deactivated devices, got: %v", err)
+	}
 
 	alias := "alias-device"
 	aliasFile := filepath.Join(dir, "devices", alias+".yaml")
