@@ -27,8 +27,9 @@ configuration files such as `policy.yaml` and `local/access.yaml`.
 
 ## Fact Shape
 
-Every `self/**/*.md` fact must have YAML frontmatter and a non-empty `rough`
-string. The Markdown body is the full private fact.
+A `self/**/*.md` fact is Markdown, optionally with YAML frontmatter. A non-empty
+`rough` string is required only when `policy.yaml` grants `rough` disclosure for
+that fact's topic.
 
 ```markdown
 ---
@@ -44,12 +45,13 @@ Home address: 123 King St W, Toronto.
 The path is the policy topic: `self/profile/address.md` is governed by
 `profile/address`. `rough:` is the only owner-authored coarse/redacted value.
 The Markdown body is the full private fact; `no` is a policy outcome, not a fact
-field.
+field. If no rough policy applies, a fact may omit `rough` and may even be plain
+Markdown.
 
 <Callout type="info">
-  `rough` is required for all files under `self/`, even when the fact feels
-  harmless. That keeps rough-level disclosure deterministic: the agent shares
-  the owner's exact rough value instead of inventing a summary.
+  When a policy change makes an existing fact rough-shareable, `doss check`
+  points to any missing `rough` values. The fix happens in context, when the
+  owner chooses rough sharing for that topic.
 </Callout>
 
 ## Disclosure Policy
@@ -77,6 +79,8 @@ Policy levels are `no`, `rough`, and `full`.
 - `no`: disclose nothing. This is also the default when no rule matches.
 - `rough`: disclose only the fact's `rough:` value.
 - `full`: disclose the Markdown body after frontmatter.
+- If `rough` is allowed but the fact has no valid `rough:` value, disclose
+  nothing for that fact. The agent must not invent a summary from the full body.
 
 Topics omit the `self/` prefix. A topic can be a folder such as `work` or a fact
 such as `profile/address`; folder rules inherit downward, and more specific

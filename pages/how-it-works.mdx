@@ -43,7 +43,9 @@ The vault is a plain folder:
 `self/`, `peers/`, and `notes/` are Markdown. YAML is only for config files such
 as `policy.yaml` and `local/access.yaml`.
 
-Every `self/**/*.md` fact must include a `rough` string:
+A `self/**/*.md` fact is Markdown, optionally with YAML frontmatter. A `rough`
+string is required only when `policy.yaml` grants rough disclosure for that
+topic:
 
 ```markdown
 ---
@@ -57,6 +59,8 @@ Home address: 123 King St W, Toronto.
 
 The `rough:` field is the exact owner-authored value used for rough disclosure.
 The body is the full private fact; `no` is a policy outcome, not a fact field.
+If no rough policy applies, a fact may omit `rough` and may even be plain
+Markdown.
 
 ## Validation
 
@@ -136,6 +140,8 @@ Policy levels are `no`, `rough`, and `full`:
 - `no`: disclose nothing, also the default when no rule matches
 - `rough`: disclose only the fact's `rough:` value
 - `full`: disclose the Markdown body after frontmatter
+- If `rough` is allowed but the fact has no valid `rough:` value, disclose
+  nothing for that fact; do not summarize the full body yourself
 
 Folder topics inherit to facts below them. More specific topics win. If a person
 belongs to several groups, the highest level wins in this order: `no`, then
@@ -189,7 +195,7 @@ local vault. It still does not delete the cloud copy.
 `doss tidy` is read-only. It lists:
 
 - check problems
-- self facts missing `rough` values
+- rough-shared self facts missing `rough` values
 - old facts that may need refresh
 - `status: suggested` facts awaiting confirmation
 - a bloated `notes/`

@@ -14,7 +14,7 @@ import { Callout } from 'nextra/components'
 | `doss sync` | Validate, commit, pull, and push. Invalid state does not leave the machine. |
 | `doss doctor` | Show vault health: stats, sync state, agent wiring, hooks, devices, and tidy hints. `--fix` repairs wiring. Alias: `status`. |
 | `doss devices` | List synced device registrations, marking current device and active vs. unregistered status. `unregister DEVICE_ID` marks another registered non-current device unregistered. |
-| `doss tidy` | Print stale facts, unconfirmed guesses, missing rough values, and notes backlog. Read-only. |
+| `doss tidy` | Print stale facts, unconfirmed guesses, rough-shared facts missing rough values, and notes backlog. Read-only. |
 | `doss log` | Record or read the disclosure ledger. `--record --to VERIFIED_ID --shared TOPIC --level rough or full` notes a disclosure. |
 | `doss uninstall` | Unwire agents and delete the local vault. It refuses unsafe deletion unless forced. |
 | `doss hook` | Harness endpoint for `post-edit` and `stop`; wired by `connect`, not run by hand. |
@@ -60,4 +60,4 @@ Valid metadata keys for Markdown memory files:
 | `tags` | list of strings | free grouping |
 | `verify_by` | YYYY-MM-DD | freshness contract; past due appears in `tidy` |
 | `evidence` | string | pointer to where this was learned |
-| `rough` | string | required under `self/`; owner-authored coarse value for rough disclosure |
+| `rough` | string | required only for rough-shared `self/` topics; owner-authored coarse value for rough disclosure |
