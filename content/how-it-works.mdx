@@ -17,6 +17,7 @@ The CLI handles the cold path around that:
 - an inspector validates writes with precise errors
 - a courier commits, pulls, and pushes validated state
 - a janitor lists facts that need owner judgment
+- a view generator exports requester-scoped context for serving layers
 - rule files tell agents what content may leave
 
 One binary, git underneath, no database, no server.
@@ -155,6 +156,29 @@ leaves.
 
 `doss log` is only an after-the-fact ledger. A log entry is never permission.
 
+## Requester Views
+
+`doss view --for VERIFIED_ID --out DIR` creates a fresh context directory for a
+single external requester. It is intended for hosts or serving layers that want
+to avoid giving the outward-facing agent raw vault access.
+
+The generated directory contains:
+
+- `self/`: only facts the requester may receive. `full` grants write the
+  Markdown body after frontmatter; `rough` grants write only the fact's
+  owner-authored `rough:` value.
+- `access.json`: local folder grants from `local/access.yaml`, using `read` or
+  `full`.
+- `manifest.json`: requester id, generation time, expiry, source vault commit,
+  source hashes, and facts blocked because a rough grant lacked `rough:`.
+- `README.md`: short instructions for the agent consuming the view.
+
+Denied topics, unlisted topics, `status: suggested` facts, missing rough values,
+`peers/`, and `notes/` are omitted. The command refuses unsafe outputs such as
+the raw vault or an existing directory Doss did not create. Regenerate after
+changing `policy.yaml` or `local/access.yaml`; expired views can be removed with
+`doss view cleanup --dir PARENT`.
+
 ## Local Access
 
 `policy.yaml` and `local/access.yaml` are deliberately separate:
@@ -166,6 +190,9 @@ leaves.
 
 They do not grant each other. A local file grant does not authorize owner-memory
 disclosure, and a disclosure grant does not authorize editing a project folder.
+
+`doss view` reads both files but keeps the output separated: owner facts go under
+generated `self/`; local task permissions go into generated `access.json`.
 
 ## Sync And Devices
 

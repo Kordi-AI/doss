@@ -15,6 +15,7 @@ import { Callout } from 'nextra/components'
 | `doss doctor` | Show vault health: stats, sync state, agent wiring, hooks, devices, and tidy hints. `--fix` repairs wiring. Alias: `status`. |
 | `doss devices` | List synced device registrations, marking current device and active vs. deactivated status. |
 | `doss deactivate` | Choose a non-current device, revoke its recorded GitHub deploy key when present, then mark it inactive. Scripts may pass `doss deactivate DEVICE_ID`. |
+| `doss view` | Generate a requester-scoped redacted context view with `self/`, `access.json`, and `manifest.json`. Use `doss view cleanup --dir PARENT` to remove expired views. |
 | `doss tidy` | Print stale facts, unconfirmed guesses, rough-shared facts missing rough values, and notes backlog. Read-only. |
 | `doss log` | Record or read the disclosure ledger. `--record --to VERIFIED_ID --shared TOPIC --level rough or full` notes a disclosure. |
 | `doss uninstall` | Unwire agents and delete the local vault. It refuses unsafe deletion unless forced. |
@@ -47,6 +48,7 @@ import { Callout } from 'nextra/components'
   errors.
 - **Agents, at wrap-up**: `doss sync`.
 - **Agents, after allowed disclosure**: `doss log --record --to VERIFIED_ID --shared TOPIC --level rough or full`.
+- **Hosts / serving layers, before an external request**: `doss view --for VERIFIED_ID --out DIR`.
 - **Owners**: `init`, `devices`, `deactivate`, `doctor`, `tidy`, `uninstall`, and policy edits.
 
 ## Frontmatter Fields

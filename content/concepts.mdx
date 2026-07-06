@@ -115,6 +115,21 @@ These files do not grant each other. `policy.yaml` never permits editing local
 projects, and `local/access.yaml` never permits disclosure of owner facts from
 `self/`.
 
+## Requester Views
+
+`doss view --for VERIFIED_ID --out DIR` creates a short-lived directory for one
+external requester. It combines the two gates without mixing their meanings:
+
+- allowed owner facts from `policy.yaml` are projected under generated `self/`
+- local folder grants from `local/access.yaml` are projected into `access.json`
+- `manifest.json` records the requester id, expiry, source hashes, source vault
+  commit, and any rough-shared facts omitted because `rough:` was missing
+
+Denied topics, unlisted topics, `status: suggested` facts, missing rough values,
+`peers/`, and `notes/` are omitted. A host should generate a fresh view after
+changing `policy.yaml` or `local/access.yaml`, then give the external-facing
+agent only that view instead of the raw vault.
+
 ## Identity
 
 Disclosure starts from trusted request metadata supplied by the host platform,
