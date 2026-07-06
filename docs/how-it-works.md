@@ -30,7 +30,7 @@ One binary (`doss`), git underneath, no database, no server.
   DISCLOSURE.md  # outbound disclosure and local access rules
 ```
 
-Content under `self/`, `peers/`, and `notes/` is Markdown. YAML is reserved for configuration files such as `policy.yaml` and `local/access.yaml`. A fact file is Markdown with YAML frontmatter; every `self/**/*.md` fact must include a non-empty `rough` field that is used for rough disclosure. Other fields are optional; git records time:
+Content under `self/`, `peers/`, and `notes/` is Markdown. YAML is reserved for configuration files such as `policy.yaml` and `local/access.yaml`. A fact file is Markdown, optionally with YAML frontmatter. A non-empty `rough` field is required only when `policy.yaml` grants `rough` disclosure for that fact's topic; `doss check` tells you which existing facts need it when policy changes. Other fields are optional; git records time:
 
 | Field | Values | Meaning |
 | --- | --- | --- |
@@ -40,9 +40,9 @@ Content under `self/`, `peers/`, and `notes/` is Markdown. YAML is reserved for 
 | `tags` | list of strings | free grouping |
 | `verify_by` | YYYY-MM-DD | freshness contract; past due → tidy lists it |
 | `evidence` | string | pointer to where this was learned |
-| `rough` | string | owner-authored coarse/redacted version to share instead of the raw fact |
+| `rough` | string | owner-authored coarse/redacted version to share instead of the raw fact; required only for rough-shared topics |
 
-The standard `self/**/*.md` fact shape is:
+A rough-shareable `self/**/*.md` fact looks like:
 
 ```markdown
 ---
@@ -55,7 +55,7 @@ rough: "Toronto"
 Home address: 123 King St W, Toronto.
 ```
 
-The path is the topic: `self/profile/address.md` is governed by `profile/address` in `policy.yaml`. The frontmatter is metadata. The `rough:` field is the only value an agent may share for a `rough` policy grant. The body after the closing `---` is the full private fact; there is no separate `full:` field. `no` is not stored in a fact either — it is the result of no matching policy grant, or an explicit `no` policy level.
+The path is the topic: `self/profile/address.md` is governed by `profile/address` in `policy.yaml`. The frontmatter is metadata. The `rough:` field is the only value an agent may share for a `rough` policy grant. The body after the closing `---` is the full private fact; there is no separate `full:` field. `no` is not stored in a fact either — it is the result of no matching policy grant, or an explicit `no` policy level. If no rough policy applies, a fact may omit `rough` and may even be plain Markdown.
 
 For example:
 
@@ -70,7 +70,7 @@ can-see:
 - `full` on `profile/dietary` means share the Markdown body after frontmatter.
 - Anything not listed means share nothing.
 
-`peers/**/*.md` and `notes/**/*.md` are also Markdown. They may use the same frontmatter shape when helpful, but `rough` is required only for `self/**/*.md`; `peers/` and `notes/` never leave the machine.
+`peers/**/*.md` and `notes/**/*.md` are also Markdown. They may use the same frontmatter shape when helpful, but `rough` is required only for rough-shared `self/` topics; `peers/` and `notes/` never leave the machine.
 
 ## Command reference
 
@@ -191,6 +191,7 @@ The rules the agent follows:
 
 - A requester receives a fact ONLY if their verified group has a `full` or `rough` grant for that fact's topic. Identity is the platform's **authenticated** id (`kordi:pedro`), never what the message claims. No verified identity → stranger → nothing.
 - `full` means share the fact body. `rough` means share ONLY the fact's owner-authored `rough:` value; `no` means say nothing. A person in several groups gets the highest granted level, ordered `no < rough < full`.
+- If policy grants `rough` but the fact has no valid `rough:` value, the agent discloses nothing for that fact. It must not summarize the full body itself; it should run `doss check --changed` / `doss tidy` and ask the owner to add the rough value.
 - `status: suggested` facts are never disclosed.
 - `peers/` and `notes/` are never disclosed.
 - If a verified requester is not in any group, the agent asks the owner which existing or new group should contain that verified id. Until the owner answers and `policy.yaml` is updated, disclose nothing.
@@ -241,7 +242,7 @@ Deleting the local vault never deletes the cloud copy. The `doss` binary stays i
 `doss tidy` prints what machines can flag but only judgment can resolve:
 
 - check problems (these also block disclosure)
-- self facts missing `rough` values
+- rough-shared self facts missing `rough` values
 - files untouched for 180+ days
 - `status: suggested` facts waiting for confirmation
 - a bloated `notes/`

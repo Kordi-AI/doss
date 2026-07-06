@@ -16,7 +16,7 @@ import (
 // dirt is everything machines can flag but only judgment can resolve.
 type dirt struct {
 	checkIssues  int
-	missingRough []string // self facts missing a usable rough disclosure value
+	missingRough []string // rough-shared self facts missing a usable rough value
 	stale        []string // possibly out of date (git-time based); informational, not an alarm
 	suggested    []string // unconfirmed guesses waiting for the owner
 	notes        int
@@ -37,7 +37,7 @@ func (d dirt) nudge() string {
 		parts = append(parts, fmt.Sprintf("%d check problem(s) to fix", d.checkIssues))
 	}
 	if len(d.missingRough) > 0 {
-		parts = append(parts, fmt.Sprintf("%d self fact(s) need rough values (%s) — add rough frontmatter; keep full facts in the body",
+		parts = append(parts, fmt.Sprintf("%d rough-shared fact(s) need rough values (%s) — add rough frontmatter; keep full facts in the body",
 			len(d.missingRough), topicList(d.missingRough, 3)))
 	}
 	if len(d.suggested) >= 5 {
@@ -148,7 +148,7 @@ func cmdTidy(args []string) error {
 		for _, f := range capList(topicsOf(d.missingRough), 10) {
 			fmt.Println("  " + f)
 		}
-		fmt.Println("  add YAML frontmatter with rough: \"Toronto\"; keep the full fact in the Markdown body")
+		fmt.Println("  add rough frontmatter to each listed rough-shared fact; keep the full fact in the Markdown body")
 		fmt.Println()
 	}
 	if len(d.suggested) > 0 {

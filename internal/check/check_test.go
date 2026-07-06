@@ -25,6 +25,16 @@ func issueByCode(issues []Issue, code string) (Issue, bool) {
 	return Issue{}, false
 }
 
+func hasIssue(issues []Issue, file, code string) bool {
+	file = filepath.ToSlash(file)
+	for _, i := range issues {
+		if filepath.ToSlash(i.File) == file && i.Code == code {
+			return true
+		}
+	}
+	return false
+}
+
 func write(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -55,7 +65,7 @@ func TestFrontmatter(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			issues := checkFrontmatter("peers/x.md", []byte(c.fm))
+			issues := checkFrontmatter("peers/x.md", []byte(c.fm), false)
 			if c.code == "" {
 				if len(issues) != 0 {
 					t.Fatalf("expected clean, got %v", issues)
@@ -95,20 +105,21 @@ func TestVaultCleanAndProblems(t *testing.T) {
 	}
 }
 
-func TestSelfMarkdownRequiresRough(t *testing.T) {
+func TestSelfMarkdownRequiresRoughOnlyWhenPolicySharesRough(t *testing.T) {
 	dir := t.TempDir()
-	write(t, filepath.Join(dir, "policy.yaml"), "groups: {}\ncan-see: {}\n")
+	write(t, filepath.Join(dir, "policy.yaml"),
+		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends:\n    profile/address: rough\n")
 
 	write(t, filepath.Join(dir, "self", "profile", "address.md"), "123 King St W\n")
 	issues, err := Vault(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !hasCode(issues, "E_ROUGH") {
-		t.Fatalf("self markdown without frontmatter rough should fail, got %v", issues)
+	if !hasIssue(issues, "self/profile/address.md", "E_ROUGH") {
+		t.Fatalf("rough-shared self markdown without frontmatter rough should fail, got %v", issues)
 	}
-	if is, ok := issueByCode(issues, "E_ROUGH"); !ok || !strings.Contains(is.Hint, "full private fact body") {
-		t.Fatalf("E_ROUGH should explain the standard fact shape, got %v", issues)
+	if is, ok := issueByCode(issues, "E_ROUGH"); !ok || !strings.Contains(is.Msg, "rough-shared") {
+		t.Fatalf("E_ROUGH should explain the rough-sharing requirement, got %v", issues)
 	}
 
 	write(t, filepath.Join(dir, "self", "profile", "address.md"), "---\nsource: owner\n---\n123 King St W\n")
@@ -116,8 +127,8 @@ func TestSelfMarkdownRequiresRough(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !hasCode(issues, "E_ROUGH") {
-		t.Fatalf("self markdown frontmatter without rough should fail, got %v", issues)
+	if !hasIssue(issues, "self/profile/address.md", "E_ROUGH") {
+		t.Fatalf("rough-shared self markdown frontmatter without rough should fail, got %v", issues)
 	}
 
 	write(t, filepath.Join(dir, "self", "profile", "address.md"), "---\nrough: \"Toronto\"\n---\n123 King St W\n")
@@ -128,9 +139,86 @@ func TestSelfMarkdownRequiresRough(t *testing.T) {
 	if hasCode(issues, "E_ROUGH") {
 		t.Fatalf("self markdown with rough should pass rough check, got %v", issues)
 	}
+}
 
+func TestSelfMarkdownDoesNotRequireRoughForFullNoOrUnlisted(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "policy.yaml"),
+		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends:\n    profile/address: full\n    profile/dietary: no\n")
+	write(t, filepath.Join(dir, "self", "profile", "address.md"), "123 King St W\n")
+	write(t, filepath.Join(dir, "self", "profile", "dietary.md"), "Peanut allergy.\n")
+	write(t, filepath.Join(dir, "self", "work", "style.md"), "Prefers concise updates.\n")
+
+	issues, err := Vault(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasCode(issues, "E_ROUGH") {
+		t.Fatalf("full/no/unlisted self facts should not require rough, got %v", issues)
+	}
+}
+
+func TestPolicySpecificityControlsRoughRequirement(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "policy.yaml"),
+		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends:\n    profile: rough\n    profile/address: full\n    work: rough\n    work/private: no\n")
+	write(t, filepath.Join(dir, "self", "profile", "name.md"), "Shenzhe.\n")
+	write(t, filepath.Join(dir, "self", "profile", "address.md"), "123 King St W\n")
+	write(t, filepath.Join(dir, "self", "work", "style.md"), "Concise updates.\n")
+	write(t, filepath.Join(dir, "self", "work", "private", "note.md"), "Private work note.\n")
+
+	issues, err := Vault(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"self/profile/name.md", "self/work/style.md"} {
+		if !hasIssue(issues, want, "E_ROUGH") {
+			t.Fatalf("%s should need rough due to inherited rough policy, got %v", want, issues)
+		}
+	}
+	for _, want := range []string{"self/profile/address.md", "self/work/private/note.md"} {
+		if hasIssue(issues, want, "E_ROUGH") {
+			t.Fatalf("%s should not need rough because a more specific rule overrides it, got %v", want, issues)
+		}
+	}
+}
+
+func TestChangedPolicyChecksExistingRoughRequirements(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "policy.yaml"),
+		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends:\n    profile/address: rough\n")
+	write(t, filepath.Join(dir, "self", "profile", "address.md"), "123 King St W\n")
+
+	issues, err := Files(dir, []string{"policy.yaml"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasIssue(issues, "self/profile/address.md", "E_ROUGH") {
+		t.Fatalf("changing policy to rough should surface existing facts missing rough, got %v", issues)
+	}
+}
+
+func TestChangedSelfFileUsesPolicyRoughRequirement(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "policy.yaml"),
+		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends:\n    profile/address: rough\n")
+	write(t, filepath.Join(dir, "self", "profile", "address.md"), "123 King St W\n")
+
+	issues, err := Files(dir, []string{"self/profile/address.md"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasIssue(issues, "self/profile/address.md", "E_ROUGH") {
+		t.Fatalf("changed rough-shared self fact should require rough, got %v", issues)
+	}
+}
+
+func TestPeersMarkdownDoesNotRequireRough(t *testing.T) {
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "policy.yaml"),
+		"groups:\n  friends: [kordi:pedro]\ncan-see:\n  friends:\n    profile/address: rough\n")
 	write(t, filepath.Join(dir, "peers", "kordi-pedro", "team.md"), "Pedro likes async updates.\n")
-	issues, err = Vault(dir)
+	issues, err := Vault(dir)
 	if err != nil {
 		t.Fatal(err)
 	}

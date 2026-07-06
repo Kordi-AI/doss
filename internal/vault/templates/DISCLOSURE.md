@@ -68,6 +68,7 @@ Policy rules:
 - Folder rules inherit to facts below them, and a more specific topic wins.
 - Not listed -> `no`. Default is deny.
 - A person in several groups gets the highest granted level, ordered `no < rough < full`.
+- If policy grants `rough` but the fact has no valid `rough:` value, disclose nothing for that fact. Do not summarize the full body yourself; run `doss check --changed` / `doss tidy` and ask the owner to add the rough value.
 - `status: suggested` facts are never disclosed.
 - `peers/` and `notes/` are never disclosed.
 - Do not work around `policy.yaml`.

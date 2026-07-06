@@ -91,8 +91,9 @@ func TestInstructionTemplatesExplainFactShapeAndDisclosure(t *testing.T) {
 		t.Fatalf("INSTRUCTION.md should route to split instruction files:\n%s", entry)
 	}
 	for _, want := range []string{
-		"Standard `self/**/*.md` fact shape",
+		"Common `self/**/*.md` fact shape",
 		"The `rough:` field is the ONLY rough value",
+		"`rough` is required only for `self/` topics that `policy.yaml` shares at `rough` level",
 		"Everything after the closing `---` is the full private fact body",
 		"There is no `no:` field inside a fact",
 		"Peer note at `peers/kordi-pedro/team.md`",
@@ -104,6 +105,7 @@ func TestInstructionTemplatesExplainFactShapeAndDisclosure(t *testing.T) {
 	for _, want := range []string{
 		"[Trusted current request metadata]",
 		"Contact Onboarding",
+		"If policy grants `rough` but the fact has no valid `rough:` value, disclose nothing",
 		"doss log --record --to <verified-id> --shared <topic> --level <rough|full>",
 	} {
 		if !strings.Contains(disclosure, want) {

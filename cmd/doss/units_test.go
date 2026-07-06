@@ -54,7 +54,7 @@ func TestMissingRoughNudge(t *testing.T) {
 		t.Fatalf("missingRoughFiles should dedupe rough issues, got %v", missing)
 	}
 	nudge := (dirt{checkIssues: len(issues), missingRough: missing}).nudge()
-	if !strings.Contains(nudge, "self fact(s) need rough values") {
+	if !strings.Contains(nudge, "rough-shared fact(s) need rough values") {
 		t.Fatalf("nudge should call out missing rough values, got %q", nudge)
 	}
 	if others := nonRoughIssues(issues); len(others) != 1 || others[0].Code != "E_EMPTY" {

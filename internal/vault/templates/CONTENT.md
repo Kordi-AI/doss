@@ -9,9 +9,10 @@ Use this file when writing, updating, reconciling, or reading owner memory for t
 - Your own guess or anything unconfirmed -> add frontmatter `source: inferred` and `status: suggested`, or park it in `notes/`.
 - Reconcile as you write. Before writing, check whether that topic's file already exists. If so, edit it in place: update it if the value changed, replace it if the new info supersedes the old, or leave it if nothing is new. Never create `dietary-2.md` / `dietary-new.md`.
 - Content under `self/`, `peers/`, and `notes/` is Markdown. YAML is only for config files such as `policy.yaml` and `local/access.yaml`.
-- Every Markdown fact under `self/` MUST use the standard fact shape below. No timestamps needed; git records time.
+- Use the standard fact shape when metadata helps or the topic may be disclosed. No timestamps needed; git records time.
+- `rough` is required only for `self/` topics that `policy.yaml` shares at `rough` level. `doss check` tells you which existing facts need it when policy changes.
 
-Standard `self/**/*.md` fact shape:
+Common `self/**/*.md` fact shape:
 
 ```markdown
 ---
@@ -26,11 +27,11 @@ Home address: 123 King St W, Toronto.
 
 - The file path is the topic. `self/profile/address.md` becomes policy topic `profile/address`.
 - YAML frontmatter is metadata. Valid keys: `source` (owner|imported|inferred|peer), `status` (active|suggested), `confidence` (high|medium|low or 0-1), `tags`, `verify_by` (YYYY-MM-DD), `evidence`, `rough`.
-- The `rough:` field is the ONLY rough value. It must be the owner's safe coarse/redacted version of the fact, written as a string.
+- The `rough:` field is the ONLY rough value. When policy shares the topic at `rough` level, it must be the owner's safe coarse/redacted version of the fact, written as a string.
 - Everything after the closing `---` is the full private fact body. There is no `full:` field.
 - There is no `no:` field inside a fact. `no` is a disclosure-policy result.
 - Keep each body focused on one topic. If a file starts collecting unrelated facts, split it by topic before syncing.
-- `peers/**/*.md` and `notes/**/*.md` are also Markdown. They may use the same frontmatter shape when helpful, but `rough` is required only under `self/`; `peers/` and `notes/` are never disclosed.
+- `peers/**/*.md` and `notes/**/*.md` are also Markdown. They may use the same frontmatter shape when helpful, but `rough` is required only for rough-shared `self/` topics; `peers/` and `notes/` are never disclosed.
 
 ## Structure Examples
 
@@ -73,6 +74,12 @@ status: active
 rough: "nut allergy"
 ---
 Severe peanut allergy; avoid peanut oil and mixed-nut desserts.
+```
+
+Private fact with no rough-sharing policy:
+
+```markdown
+Prefers focused morning work blocks.
 ```
 
 Peer note at `peers/kordi-pedro/team.md`:

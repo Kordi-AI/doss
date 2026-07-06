@@ -59,9 +59,18 @@ var (
 
 const maxFileSize = 128 * 1024
 
+type policyFile struct {
+	Groups map[string][]string `yaml:"groups"`
+	CanSee map[string]any      `yaml:"can-see"`
+}
+
+// policyRules is group -> topic -> disclosure level.
+type policyRules map[string]map[string]string
+
 // Vault checks the whole vault.
 func Vault(dir string) ([]Issue, error) {
 	var issues []Issue
+	rules := roughPolicyRules(dir)
 
 	// Root layout: no strays.
 	entries, err := os.ReadDir(dir)
@@ -103,7 +112,7 @@ func Vault(dir string) ([]Issue, error) {
 				}
 				return nil
 			}
-			issues = append(issues, checkFile(dir, rel)...)
+			issues = append(issues, checkFile(dir, rel, rules)...)
 			return nil
 		})
 	}
@@ -118,14 +127,21 @@ func Vault(dir string) ([]Issue, error) {
 // Files checks a specific set of vault-relative paths (plus policy.yaml if listed).
 func Files(dir string, files []string) ([]Issue, error) {
 	var issues []Issue
+	rules := roughPolicyRules(dir)
+	checkedSelf := map[string]bool{}
+	policyChanged := false
 	for _, f := range files {
 		f = filepath.ToSlash(f)
 		switch {
 		case f == "policy.yaml":
+			policyChanged = true
 			issues = append(issues, checkPolicy(dir)...)
 		case strings.HasPrefix(f, "self/") || strings.HasPrefix(f, "peers/") || strings.HasPrefix(f, "notes/"):
 			if _, err := os.Stat(filepath.Join(dir, f)); err == nil {
-				issues = append(issues, checkFile(dir, f)...)
+				issues = append(issues, checkFile(dir, f, rules)...)
+				if strings.HasPrefix(f, "self/") {
+					checkedSelf[f] = true
+				}
 			}
 		case f == filepath.ToSlash(filepath.Join("local", "access.yaml")):
 			issues = append(issues, checkAccess(dir)...)
@@ -147,10 +163,13 @@ func Files(dir string, files []string) ([]Issue, error) {
 				Hint: "memory goes under self/, peers/, or notes/"})
 		}
 	}
+	if policyChanged {
+		issues = append(issues, checkPolicyDrivenRough(dir, rules, checkedSelf)...)
+	}
 	return issues, nil
 }
 
-func checkFile(dir, rel string) []Issue {
+func checkFile(dir, rel string, rules policyRules) []Issue {
 	var issues []Issue
 	base := filepath.Base(rel)
 
@@ -178,13 +197,13 @@ func checkFile(dir, rel string) []Issue {
 
 	fm, body, ok := splitFrontmatter(b)
 	if ok {
-		issues = append(issues, checkFrontmatter(rel, fm)...)
+		issues = append(issues, checkFrontmatter(rel, fm, needsRough(rel, rules))...)
 	} else {
 		body = b
-		if strings.HasPrefix(rel, "self/") {
+		if needsRough(rel, rules) {
 			issues = append(issues, Issue{File: rel, Code: "E_ROUGH",
-				Msg:  "self facts must start with frontmatter including rough",
-				Hint: `format: --- / rough: "Toronto" / --- / full private fact body`})
+				Msg:  "rough-shared self facts need frontmatter with rough",
+				Hint: `add frontmatter: --- / rough: "Toronto" / --- / full private fact body`})
 		}
 	}
 	if strings.TrimSpace(string(body)) == "" {
@@ -194,7 +213,7 @@ func checkFile(dir, rel string) []Issue {
 	return issues
 }
 
-func checkFrontmatter(rel string, fm []byte) []Issue {
+func checkFrontmatter(rel string, fm []byte, needsRough bool) []Issue {
 	var issues []Issue
 	var m map[string]any
 	if err := yaml.Unmarshal(fm, &m); err != nil {
@@ -270,22 +289,12 @@ func checkFrontmatter(rel string, fm []byte) []Issue {
 					Msg: "evidence must be a string"})
 			}
 		case "rough":
-			if s, ok := v.(string); !ok {
-				issues = append(issues, Issue{File: rel, Code: "E_VALUE",
-					Msg:  "rough must be a string",
-					Hint: `rough is the only value shared for rough disclosure, e.g. rough: "Toronto"`})
-			} else if strings.TrimSpace(s) == "" {
-				issues = append(issues, Issue{File: rel, Code: "E_ROUGH",
-					Msg:  "rough cannot be empty",
-					Hint: `write the owner's safest shareable coarse value, e.g. rough: "Toronto"`})
-			}
+			issues = append(issues, checkRoughValue(rel, v)...)
 		}
 	}
-	if strings.HasPrefix(rel, "self/") {
+	if needsRough {
 		if _, ok := m["rough"]; !ok {
-			issues = append(issues, Issue{File: rel, Code: "E_ROUGH",
-				Msg:  "self facts need a rough value",
-				Hint: `add rough: "..." to frontmatter; the Markdown body remains the full private fact`})
+			issues = append(issues, missingRoughIssue(rel))
 		}
 	}
 	// Inferred facts must stay suggestions until confirmed.
@@ -299,6 +308,25 @@ func checkFrontmatter(rel string, fm []byte) []Issue {
 	return issues
 }
 
+func missingRoughIssue(rel string) Issue {
+	return Issue{File: rel, Code: "E_ROUGH",
+		Msg:  "rough-shared self facts need a rough value",
+		Hint: `add rough: "..." to frontmatter; the Markdown body remains the full private fact`}
+}
+
+func checkRoughValue(rel string, v any) []Issue {
+	if s, ok := v.(string); !ok {
+		return []Issue{{File: rel, Code: "E_VALUE",
+			Msg:  "rough must be a string",
+			Hint: `rough is the only value shared for rough disclosure, e.g. rough: "Toronto"`}}
+	} else if strings.TrimSpace(s) == "" {
+		return []Issue{{File: rel, Code: "E_ROUGH",
+			Msg:  "rough cannot be empty",
+			Hint: `write the owner's safest shareable coarse value, e.g. rough: "Toronto"`}}
+	}
+	return nil
+}
+
 func checkPolicy(dir string) []Issue {
 	rel := "policy.yaml"
 	b, err := os.ReadFile(filepath.Join(dir, rel))
@@ -306,10 +334,7 @@ func checkPolicy(dir string) []Issue {
 		return []Issue{{File: rel, Code: "E_READ", Msg: "policy.yaml missing",
 			Hint: "run `doss init` or restore it — default is deny-all"}}
 	}
-	var p struct {
-		Groups map[string][]string `yaml:"groups"`
-		CanSee map[string]any      `yaml:"can-see"`
-	}
+	var p policyFile
 	if err := yaml.Unmarshal(b, &p); err != nil {
 		return []Issue{{File: rel, Line: yamlLine(err), Code: "E_YAML",
 			Msg: "invalid YAML: " + yamlMsg(err)}}
@@ -363,6 +388,113 @@ func checkPolicy(dir string) []Issue {
 		}
 	}
 	return issues
+}
+
+func roughPolicyRules(dir string) policyRules {
+	b, err := os.ReadFile(filepath.Join(dir, "policy.yaml"))
+	if err != nil {
+		return nil
+	}
+	var p policyFile
+	if yaml.Unmarshal(b, &p) != nil {
+		return nil
+	}
+	rules := policyRules{}
+	for group, raw := range p.CanSee {
+		topics, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		for topic, rawLevel := range topics {
+			level, ok := rawLevel.(string)
+			if !ok || !disclosureLevels[level] || !validPolicyTopic(topic) {
+				continue
+			}
+			if rules[group] == nil {
+				rules[group] = map[string]string{}
+			}
+			rules[group][topic] = level
+		}
+	}
+	return rules
+}
+
+func checkPolicyDrivenRough(dir string, rules policyRules, alreadyChecked map[string]bool) []Issue {
+	var issues []Issue
+	root := filepath.Join(dir, "self")
+	_ = filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
+		if err != nil || e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+			return nil
+		}
+		rel, _ := filepath.Rel(dir, p)
+		rel = filepath.ToSlash(rel)
+		if alreadyChecked[rel] {
+			return nil
+		}
+		issues = append(issues, checkRequiredRough(dir, rel, rules)...)
+		return nil
+	})
+	return issues
+}
+
+func checkRequiredRough(dir, rel string, rules policyRules) []Issue {
+	if !needsRough(rel, rules) {
+		return nil
+	}
+	if filepath.Ext(rel) != ".md" {
+		return nil
+	}
+	b, err := os.ReadFile(filepath.Join(dir, rel))
+	if err != nil {
+		return []Issue{{File: rel, Code: "E_READ", Msg: err.Error()}}
+	}
+	fm, _, ok := splitFrontmatter(b)
+	if !ok {
+		return []Issue{{File: rel, Code: "E_ROUGH",
+			Msg:  "rough-shared self facts need frontmatter with rough",
+			Hint: `add frontmatter: --- / rough: "Toronto" / --- / full private fact body`}}
+	}
+	var m map[string]any
+	if err := yaml.Unmarshal(fm, &m); err != nil {
+		return []Issue{{File: rel, Line: yamlLine(err) + 1, Code: "E_YAML",
+			Msg: "invalid frontmatter: " + yamlMsg(err)}}
+	}
+	v, ok := m["rough"]
+	if !ok {
+		return []Issue{missingRoughIssue(rel)}
+	}
+	return checkRoughValue(rel, v)
+}
+
+func needsRough(rel string, rules policyRules) bool {
+	topic, ok := selfPolicyTopic(rel)
+	if !ok {
+		return false
+	}
+	for _, groupRules := range rules {
+		if effectivePolicyLevel(groupRules, topic) == "rough" {
+			return true
+		}
+	}
+	return false
+}
+
+func effectivePolicyLevel(rules map[string]string, topic string) string {
+	var level string
+	bestDepth := -1
+	bestLen := -1
+	for ruleTopic, ruleLevel := range rules {
+		if !topicMatches(ruleTopic, topic) {
+			continue
+		}
+		depth := strings.Count(ruleTopic, "/")
+		if depth > bestDepth || (depth == bestDepth && len(ruleTopic) > bestLen) {
+			bestDepth = depth
+			bestLen = len(ruleTopic)
+			level = ruleLevel
+		}
+	}
+	return level
 }
 
 func checkLedger(dir string) []Issue {
@@ -526,6 +658,22 @@ func checkDeviceFile(dir, rel string) []Issue {
 			Hint: "status must be active or unregistered"})
 	}
 	return issues
+}
+
+func selfPolicyTopic(rel string) (string, bool) {
+	rel = filepath.ToSlash(rel)
+	if !strings.HasPrefix(rel, "self/") || filepath.Ext(rel) != ".md" {
+		return "", false
+	}
+	topic := strings.TrimSuffix(strings.TrimPrefix(rel, "self/"), ".md")
+	if !validPolicyTopic(topic) {
+		return "", false
+	}
+	return topic, true
+}
+
+func topicMatches(ruleTopic, factTopic string) bool {
+	return factTopic == ruleTopic || strings.HasPrefix(factTopic, ruleTopic+"/")
 }
 
 func validPolicyTopic(topic string) bool {
