@@ -18,4 +18,5 @@ Import the repo on Vercel and set the **Production Branch** to `doss-docs`
 (Settings → Git). Framework preset: Next.js. It auto-builds on every push to
 this branch.
 
-Content lives in `pages/*.mdx`; the sidebar order is `pages/_meta.json`.
+Content lives in `content/*.mdx`; the sidebar order is `content/_meta.js`.
+Nextra 4 uses the App Router shell under `app/`.
