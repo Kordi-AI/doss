@@ -247,6 +247,9 @@ func TestUnregistersAnotherRegisteredDevice(t *testing.T) {
 	if err := cmdUnregister([]string{"missing-device"}); err == nil {
 		t.Fatal("unregister should reject unknown devices")
 	}
+	if err := cmdUnregister(nil); err == nil || !strings.Contains(err.Error(), "choose a device") {
+		t.Fatalf("unregister without id should require an interactive terminal, got: %v", err)
+	}
 	if err := cmdUnregister([]string{old}); err != nil {
 		t.Fatal(err)
 	}
