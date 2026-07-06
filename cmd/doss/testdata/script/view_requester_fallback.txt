@@ -1,0 +1,56 @@
+# Requester views must combine policy.yaml and local/access.yaml, while keeping
+# missing rough values conservative.
+env HOME=$WORK/home DOSS_HOME=$WORK/vault
+mkdir $HOME
+exec $DOSS init --no-connect --git-name 'Test Owner' --git-email owner@example.com
+
+# Policy gives Pedro rough access to address, full access to dietary, and rough
+# access to a fact that intentionally has no rough value.
+cp policy.yaml $DOSS_HOME/policy.yaml
+mkdir $DOSS_HOME/self/profile
+cp address.md $DOSS_HOME/self/profile/address.md
+cp dietary.md $DOSS_HOME/self/profile/dietary.md
+cp missing.md $DOSS_HOME/self/profile/missing.md
+cp access.yaml $DOSS_HOME/local/access.yaml
+
+# The validator catches the missing rough value.
+! exec $DOSS check --changed --quiet
+stdout 'self/profile/missing.md.*E_ROUGH'
+
+# The view still succeeds, but omits that fact instead of leaking the full body.
+exec $DOSS view --for kordi:pedro --out view
+stdout 'warning: 1 fact.*rough values are missing'
+grep 'Toronto' view/self/profile/address.md
+! grep '123 King St' view/self/profile/address.md
+grep 'No cilantro' view/self/profile/dietary.md
+! exists view/self/profile/missing.md
+grep '"topic": "profile/missing"' view/manifest.json
+grep '"path": "/tmp/project"' view/access.json
+grep '"level": "read"' view/access.json
+
+-- policy.yaml --
+groups:
+  friends:
+    - kordi:pedro
+can-see:
+  friends:
+    profile/address: rough
+    profile/dietary: full
+    profile/missing: rough
+
+-- access.yaml --
+grants:
+  friends:
+    /tmp/project: read
+
+-- address.md --
+---
+rough: "Toronto"
+---
+123 King St W, Toronto.
+
+-- dietary.md --
+No cilantro.
+
+-- missing.md --
+This private detail has no rough value yet.

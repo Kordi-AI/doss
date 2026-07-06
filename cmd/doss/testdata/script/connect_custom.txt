@@ -1,0 +1,39 @@
+# A custom agent instruction file can be wired, refreshed, and removed by
+# running the real doss binary.
+env HOME=$WORK/home DOSS_HOME=$WORK/vault
+mkdir $HOME
+exec $DOSS init --no-connect --git-name 'Test Owner' --git-email owner@example.com
+stdout 'vault ready:'
+exists $DOSS_HOME/INSTRUCTION.md
+exists $DOSS_HOME/devices
+
+# Wire an agent that Doss does not know about ahead of time.
+mkdir custom
+exec $DOSS connect --file custom/AGENTS.md
+stdout 'custom.*added to'
+grep '<!-- doss:begin -->' custom/AGENTS.md
+grep 'INSTRUCTION.md' custom/AGENTS.md
+grep 'CONTENT.md' custom/AGENTS.md
+grep 'DISCLOSURE.md' custom/AGENTS.md
+grep 'policy.yaml' custom/AGENTS.md
+exists $HOME/.config/doss/connect.json
+
+# A later run without --file refreshes the saved custom target.
+cp stale.md custom/AGENTS.md
+exec $DOSS connect
+stdout 'custom.*updated in'
+! grep 'stale instruction text' custom/AGENTS.md
+grep 'doss check --changed' custom/AGENTS.md
+
+# Removing wiring strips the managed section and clears the saved custom target.
+exec $DOSS connect --remove
+! grep '<!-- doss:begin -->' custom/AGENTS.md
+grep -count=1 '^# custom agent$' custom/AGENTS.md
+grep '"files": null' $HOME/.config/doss/connect.json
+
+-- stale.md --
+# custom agent
+
+<!-- doss:begin -->
+stale instruction text
+<!-- doss:end -->

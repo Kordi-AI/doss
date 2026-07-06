@@ -4,5 +4,10 @@ dist/
 *.test
 .scratch/
 
+# generated terminal demos; keep the .tape sources in git
+docs/testing/tapes/*.gif
+docs/testing/tapes/*.mp4
+docs/testing/tapes/*.webm
+
 # internal design docs — local only, never public
 docs/design/
