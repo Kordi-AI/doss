@@ -227,7 +227,7 @@ func TestUninstallPushesDeviceUnregistration(t *testing.T) {
 	}
 }
 
-func TestDevicesUnregistersAnotherRegisteredDevice(t *testing.T) {
+func TestUnregistersAnotherRegisteredDevice(t *testing.T) {
 	dir := initTestVault(t)
 	t.Setenv("DOSS_HOME", dir)
 	if _, err := vault.RegisterDevice(dir); err != nil {
@@ -241,13 +241,13 @@ func TestDevicesUnregistersAnotherRegisteredDevice(t *testing.T) {
 	runGit(t, dir, "add", "-A")
 	runGit(t, dir, "commit", "-m", "devices")
 
-	if err := cmdDevices([]string{"unregister", vault.DeviceID(dir)}); err == nil {
-		t.Fatal("devices unregister should reject the current device")
+	if err := cmdUnregister([]string{vault.DeviceID(dir)}); err == nil {
+		t.Fatal("unregister should reject the current device")
 	}
-	if err := cmdDevices([]string{"unregister", "missing-device"}); err == nil {
-		t.Fatal("devices unregister should reject unknown devices")
+	if err := cmdUnregister([]string{"missing-device"}); err == nil {
+		t.Fatal("unregister should reject unknown devices")
 	}
-	if err := cmdDevices([]string{"unregister", old}); err != nil {
+	if err := cmdUnregister([]string{old}); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := os.ReadFile(oldFile)
@@ -256,6 +256,24 @@ func TestDevicesUnregistersAnotherRegisteredDevice(t *testing.T) {
 	}
 	if !strings.Contains(string(raw), "status: unregistered") {
 		t.Fatalf("device should be marked unregistered, got:\n%s", raw)
+	}
+
+	alias := "alias-device"
+	aliasFile := filepath.Join(dir, "devices", alias+".yaml")
+	if err := os.WriteFile(aliasFile, []byte("id: alias-device\nlabel: Alias Device\nstatus: active\nregistered_at: \"2026-07-05T12:00:00Z\"\nunregistered_at: \"\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, dir, "add", "-A")
+	runGit(t, dir, "commit", "-m", "alias device")
+	if err := cmdDevices([]string{"unregister", alias}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err = os.ReadFile(aliasFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), "status: unregistered") {
+		t.Fatalf("devices unregister alias should still work, got:\n%s", raw)
 	}
 }
 

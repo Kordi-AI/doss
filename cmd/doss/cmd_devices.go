@@ -26,6 +26,21 @@ func cmdDevices(args []string) error {
 	return printDevices(d)
 }
 
+func cmdUnregister(args []string) error {
+	fs := flag.NewFlagSet("unregister", flag.ExitOnError)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() != 1 {
+		return fmt.Errorf("usage: doss unregister <device-id>")
+	}
+	d, err := vault.MustExist()
+	if err != nil {
+		return err
+	}
+	return unregisterDevice(d, fs.Arg(0))
+}
+
 func unregisterDevice(dir, id string) error {
 	if id == vault.DeviceID(dir) {
 		return fmt.Errorf("use `doss uninstall` to unregister the current device")

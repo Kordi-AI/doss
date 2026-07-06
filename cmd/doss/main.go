@@ -18,7 +18,8 @@ usage: doss <command> [flags]
   check    validate memory files (run after edits; errors are precise)
   sync     commit + pull + push the vault (refuses if check fails)
   doctor   full health: vault stats, sync, wiring, hooks, tidy hints; --fix repairs (alias: status)
-  devices  list device registrations; unregister <id> revokes its deploy key when recorded
+  devices  list device registrations
+  unregister  revoke a non-current device's recorded deploy key, then mark it inactive
   tidy     dirt report: stale facts, unconfirmed guesses, notes backlog
   uninstall  delete the local vault and unwire agents (safe when a cloud copy exists)
   hook     harness hook endpoint (post-edit, stop) — wired by connect
@@ -48,6 +49,8 @@ func main() {
 		err = cmdDoctor(os.Args[2:])
 	case "devices":
 		err = cmdDevices(os.Args[2:])
+	case "unregister":
+		err = cmdUnregister(os.Args[2:])
 	case "uninstall":
 		err = cmdUninstall(os.Args[2:])
 	case "tidy":
