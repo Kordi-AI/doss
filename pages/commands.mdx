@@ -1,36 +1,63 @@
+import { Callout } from 'nextra/components'
+
 # Commands
 
 `doss COMMAND [flags]` · vault location: `$DOSS_HOME`, default `~/.doss`
 
+## Reference
+
 | Command | What it does |
 | --- | --- |
-| `doss init` | Create a vault. Main paths: `doss init` for a new vault, `doss init --from owner/repo` for another device. Agent setup can pass `--git-name` / `--git-email`. Advanced: `--github --repo my-doss`, `--remote GIT_URL`, `--dir PATH`, `--no-connect`. Auto-runs `connect`. |
-| `doss connect` | Wire the vault into every installed agent's global config. `--file PATH` for an unknown agent; `--remove` to undo. |
-| `doss check` | Validate memory files; bad writes bounce with precise, fixable errors. `--changed` checks only files touched since the last commit. |
-| `doss sync` | Commit + pull + push. Only validated state ever leaves; conflicts abort safely. |
-| `doss doctor` | Full health: vault stats, sync state, agent wiring, hooks, tidy hints. `--fix` repairs wiring. Alias: `status`. |
-| `doss devices` | List synced device registrations, marking the current device and active vs. unregistered status. `unregister DEVICE_ID` marks an already-registered non-current device unregistered. |
-| `doss tidy` | What needs your judgment: stale facts, unconfirmed guesses, notes backlog. Read-only. |
-| `doss log` | `--record --to VERIFIED_ID --shared TOPIC --level rough or full` notes a disclosure; plain `doss log` reads "who knows what about me" across all devices. |
-| `doss uninstall` | Delete the local vault and unwire agents (safe when a cloud copy exists; refuses otherwise unless `--force`). |
-| `doss hook` | Harness hook endpoint (`post-edit`, `stop`) — wired by `connect`, never run by hand. |
+| `doss init` | Create a new vault, or attach this device to an existing cloud vault. Auto-registers the device and runs `connect` unless `--no-connect` is passed. |
+| `doss connect` | Wire the vault into installed agents' global instruction files. Use `--file PATH` for an unknown agent; `--remove` to undo. |
+| `doss check` | Validate vault files. `--changed` checks files touched since the last commit, including `local/access.yaml` when present. |
+| `doss sync` | Validate, commit, pull, and push. Invalid state does not leave the machine. |
+| `doss doctor` | Show vault health: stats, sync state, agent wiring, hooks, devices, and tidy hints. `--fix` repairs wiring. Alias: `status`. |
+| `doss devices` | List synced device registrations, marking current device and active vs. unregistered status. `unregister DEVICE_ID` marks another registered non-current device unregistered. |
+| `doss tidy` | Print stale facts, unconfirmed guesses, missing rough values, and notes backlog. Read-only. |
+| `doss log` | Record or read the disclosure ledger. `--record --to VERIFIED_ID --shared TOPIC --level rough or full` notes a disclosure. |
+| `doss uninstall` | Unwire agents and delete the local vault. It refuses unsafe deletion unless forced. |
+| `doss hook` | Harness endpoint for `post-edit` and `stop`; wired by `connect`, not run by hand. |
 
-## Who runs what
+## Setup Variants
 
-- **Agents, automatically** — `check` (via hooks after edits), `sync` (at session end).
-- **Agents, when acting for others** — `log --record --to VERIFIED_ID --shared TOPIC --level rough or full` after an allowed disclosure.
-- **You** — `init`, `devices`, `doctor`, `tidy`, `uninstall`, and editing `policy.yaml` / `local/access.yaml`.
+| Command | Use when |
+| --- | --- |
+| `doss init` | Main human path: guided setup for a new vault. |
+| `doss init --from owner/repo` | Attach another device to an existing GitHub vault. |
+| `doss init --from GIT_URL` | Attach another device from an arbitrary git remote URL. |
+| `doss init --github` | Create a new private GitHub cloud copy using the default repo name. |
+| `doss init --github --repo NAME` | Create a new private GitHub cloud copy with a specific repo name. |
+| `doss init --remote GIT_URL` | Create a vault and connect it to an existing remote. |
+| `doss init --git-name "Owner Name" --git-email owner@example.com` | Non-interactive setup where an agent supplies commit identity after asking the owner. |
+| `doss init --dir PATH` | Initialize a vault outside the default `~/.doss` location. |
+| `doss init --no-connect` | Initialize without wiring agent instruction files. |
 
-## Frontmatter fields
+<Callout type="warning">
+  `doss devices unregister DEVICE_ID` does not revoke device access. It only
+  writes `status: unregistered` to the synced device registry. A lost device with
+  an existing clone and credentials can still pull or push until you revoke its
+  GitHub, SSH, token, or deploy-key access outside Doss.
+</Callout>
 
-Valid frontmatter keys:
+## Who Runs What
+
+- **Agents, after editing memory**: `doss check --changed`, then fix any precise
+  errors.
+- **Agents, at wrap-up**: `doss sync`.
+- **Agents, after allowed disclosure**: `doss log --record --to VERIFIED_ID --shared TOPIC --level rough or full`.
+- **Owners**: `init`, `devices`, `doctor`, `tidy`, `uninstall`, and policy edits.
+
+## Frontmatter Fields
+
+Valid metadata keys for Markdown memory files:
 
 | Field | Values | Meaning |
 | --- | --- | --- |
 | `source` | owner / imported / inferred / peer | where it came from |
-| `status` | active / suggested | suggested = an unconfirmed guess; never disclosed |
-| `confidence` | high / medium / low, or 0–1 | how sure |
+| `status` | active / suggested | suggested = unconfirmed and never disclosed |
+| `confidence` | high / medium / low, or 0-1 | how sure |
 | `tags` | list of strings | free grouping |
-| `verify_by` | YYYY-MM-DD | freshness contract; past due → `tidy` lists it |
-| `evidence` | string | where this was learned |
-| `rough` | string | required under `self/`; the owner-authored coarse/redacted value shared for `rough` grants |
+| `verify_by` | YYYY-MM-DD | freshness contract; past due appears in `tidy` |
+| `evidence` | string | pointer to where this was learned |
+| `rough` | string | required under `self/`; owner-authored coarse value for rough disclosure |

@@ -2,108 +2,146 @@ import { Callout } from 'nextra/components'
 
 # Concepts
 
-## The vault
+## The Vault
 
-Your vault is a plain folder (default `~/.doss`), synced across devices with git.
+Doss is a plain folder, usually `~/.doss`, synced across the owner's devices with
+git. Agents remember and recall by reading and writing files.
 
 ```text
 ~/.doss/
-  self/          facts about you; the path IS the topic (self/profile/dietary.md)
-  peers/         what other people shared with you
-  notes/         markdown scratch; never shared
-  policy.yaml    disclosure rules: who may see each topic as no/rough/full (syncs)
-  devices/       synced device registry; active/unregistered YAML per device
-  ledger/        the disclosure log, one append-only file per device
-  local/         device-only settings (gitignored, never syncs)
-    access.yaml  what your agent may DO with this device's folders, per group
-  INSTRUCTION.md entry rules agents read first
+  self/          facts about the owner; path = topic
+  peers/         what other people shared with the owner
+  notes/         Markdown scratch; never disclosed
+  policy.yaml    synced disclosure rules for owner memory
+  devices/       synced active/unregistered device records
+  ledger/        disclosure log, one append-only JSONL file per device
+  local/
+    access.yaml  device-local access rules; gitignored, never synced
+  INSTRUCTION.md entry router agents read first
   CONTENT.md     content maintenance rules
   DISCLOSURE.md  outbound disclosure and local access rules
 ```
 
-A **fact** is a small markdown file with YAML frontmatter. Every `self/**/*.md`
-fact needs `rough`, the owner-authored coarse value used for rough disclosure.
-Git records time.
+Content under `self/`, `peers/`, and `notes/` is Markdown. YAML is reserved for
+configuration files such as `policy.yaml` and `local/access.yaml`.
+
+## Fact Shape
+
+Every `self/**/*.md` fact must have YAML frontmatter and a non-empty `rough`
+string. The Markdown body is the full private fact.
 
 ```markdown
-<!-- self/profile/address.md -->
 ---
 source: owner
 status: active
 confidence: high
+tags: [profile]
 rough: "Toronto"
 ---
 Home address: 123 King St W, Toronto.
 ```
 
-## Disclosure — `policy.yaml`
+The path is the policy topic: `self/profile/address.md` is governed by
+`profile/address`. `rough:` is the only owner-authored coarse/redacted value.
+The Markdown body is the full private fact; `no` is a policy outcome, not a fact
+field.
 
-`policy.yaml` answers **who can SEE what**. It maps groups of verified people to
-disclosure levels for topics under `self/`: `no`, `rough`, or `full`. This is your
-portable preference, so it **syncs** across devices.
+<Callout type="info">
+  `rough` is required for all files under `self/`, even when the fact feels
+  harmless. That keeps rough-level disclosure deterministic: the agent shares
+  the owner's exact rough value instead of inventing a summary.
+</Callout>
+
+## Disclosure Policy
+
+`policy.yaml` answers: **what owner memory may this verified requester receive?**
+It syncs because it is the owner's portable disclosure preference.
 
 ```yaml
 groups:
   friends:  [kordi:pedro, kordi:qiancx]
   contacts: [kordi:jiaxin]
+
 can-see:
   friends:
-    profile/address: rough   # share only the file's rough value
-    profile/dietary: full    # share the full Markdown body
-    work: rough              # applies to everything under self/work/
+    profile/address: rough   # share only rough:
+    profile/dietary: full    # share the Markdown body
+    work: rough              # applies under self/work/
   contacts:
     profile/address: rough
   # anything not listed: no disclosure
 ```
 
-Topics are paths without the `self/` prefix. A topic may name a folder (`work`) or
-a specific fact (`profile/address`). Folder rules inherit to facts below them, and
-a more specific topic wins. **Default is deny.** A person in several groups gets
-the highest granted level, ordered `no < rough < full`.
+Policy levels are `no`, `rough`, and `full`.
 
-<Callout type="info">
-  `rough:` is the only value an agent may share for a `rough` grant. The Markdown
-  body after frontmatter is the full private fact. There is no `full:` field and
-  no `no:` field inside a fact.
-</Callout>
+- `no`: disclose nothing. This is also the default when no rule matches.
+- `rough`: disclose only the fact's `rough:` value.
+- `full`: disclose the Markdown body after frontmatter.
 
-## Device access — `local/access.yaml`
+Topics omit the `self/` prefix. A topic can be a folder such as `work` or a fact
+such as `profile/address`; folder rules inherit downward, and more specific
+rules win. If someone belongs to several groups, the highest level wins in this
+order: `no`, then `rough`, then `full`.
 
-`access.yaml` answers **who can make your agent DO what** with this device's folders —
-reading a file to share, or carrying out a task someone delegates (e.g. "fix this bug").
+`status: suggested` facts are never disclosed. `peers/` and `notes/` are never
+disclosed.
 
-It is a different concept from `policy.yaml`, so it lives in `local/` and **never syncs**:
-`policy.yaml` is your portable preference; this is about one computer's files.
+## Local Access
+
+`local/access.yaml` answers a different question: **what may this requester ask
+this device's agent to do with local folders?** It is gitignored because folder
+paths and local risk differ per machine.
+
+| File | Syncs? | Scope | Levels |
+| --- | --- | --- | --- |
+| `policy.yaml` | yes | owner memory under `self/` | `no`, `rough`, `full` |
+| `local/access.yaml` | no | this device's folders | `no`, `read`, `full` |
 
 ```yaml
 grants:
   friends:
     ~/Projects/opensource: full    # read, edit, run
-    ~/Documents/public: read       # may read/share, not modify
+    ~/Documents/public: read       # read/share only
   contacts:
     ~/Projects/opensource: read
 ```
 
-Three levels: `no` (don't touch it for them) · `read` (read/share files there) ·
-`full` (read + edit + run). Default is `no`.
-
-## Multi-device
-
-Every device holds a full copy of the vault. `doss sync` (git underneath) keeps them
-aligned; conflicts abort safely with both versions preserved. `devices/` syncs and
-records which devices are `active` or `unregistered`; old records stay so ledger
-files remain interpretable. `local/` never syncs. Ledger files do sync, but each
-device appends to its own file under `ledger/` so devices do not fight over one log
-file.
-
-`doss init` registers the current device and prints the same list as `doss devices`.
-`doss uninstall` marks the current device `unregistered`, pushes that state, and only
-then deletes the local vault. `doss devices unregister DEVICE_ID` marks another existing
-device unregistered. This is bookkeeping, not security revocation; revoke GitHub,
-SSH, or token access too if a device is lost.
+These files do not grant each other. `policy.yaml` never permits editing local
+projects, and `local/access.yaml` never permits disclosure of owner facts from
+`self/`.
 
 ## Identity
 
-The requester's identity comes from the **platform's authenticated id** (like
-`kordi:pedro`), never from what a message claims. No verified identity → treated as a
-stranger → nothing. Groups are defined in `policy.yaml`.
+Disclosure starts from trusted request metadata supplied by the host platform,
+not from message text. A requester id should look like `kordi:pedro`. If there is
+no verified id, the requester is treated as unknown and default deny applies.
+
+When a verified requester is not in any `policy.yaml` group, the agent asks the
+owner which existing or new group should include that id. Until the owner answers
+and `policy.yaml` is updated, nothing leaves.
+
+## Devices
+
+Every device has a synced YAML record under `devices/` with `status: active` or
+`status: unregistered`. `doss init` registers the current device and prints the
+same list as `doss devices`. `doss uninstall` marks the current device
+`unregistered`, pushes that state when possible, and then deletes the local
+vault.
+
+<Callout type="warning">
+  `doss devices unregister DEVICE_ID` is bookkeeping, not security revocation.
+  It marks another registered device as `unregistered` in the synced registry,
+  but it cannot revoke git credentials, SSH keys, GitHub tokens, or a local copy
+  that already exists. For a lost or compromised device, revoke its external
+  access outside Doss too.
+</Callout>
+
+## Agent Rule Files
+
+`INSTRUCTION.md` is intentionally small. It tells agents which rule file to read:
+
+- `CONTENT.md` for maintaining Markdown memory content.
+- `DISCLOSURE.md` for outbound disclosure and local access decisions.
+
+This keeps daily memory writing separate from public disclosure while giving
+`doss connect` one stable entry point to inject into agent instructions.

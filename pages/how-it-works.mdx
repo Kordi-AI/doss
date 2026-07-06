@@ -1,93 +1,223 @@
 import { Callout } from 'nextra/components'
 
-# How it works
+# How It Works
 
-The mechanics behind the commands: what runs, when, and what happens when things
-go wrong.
+The detailed mechanics behind setup, validation, sync, disclosure, and failure
+modes.
 
-## Two paths
+## Mental Model
 
-**Daily use — a notebook (hot path).** Remember = write a file; recall = read/grep.
-No intermediate steps. In the background, a small helper validates every write,
-syncs to your other devices, and periodically flags what needs your judgment.
+The hot path is just files:
 
-**Someone else asks — the cold path.** Only then do the disclosure rules matter. The
-agent finds the info the normal way, then follows `DISCLOSURE.md` and `policy.yaml`
-(and, for actions on files, `local/access.yaml`). Everything is plain files it reads.
+- remember = write Markdown under `self/`, `peers/`, or `notes/`
+- recall = `ls`, `rg`, and read files
 
-## Validation: bounce and retry
+The CLI handles the cold path around that:
 
-Every write is checked instantly (milliseconds, deterministic). Valid content lands;
-invalid content **bounces** — the error names the file, line, and fix, and the agent
-retries in the same turn. The library only ever contains validated content, so reads
-always return clean data.
+- an inspector validates writes with precise errors
+- a courier commits, pulls, and pushes validated state
+- a janitor lists facts that need owner judgment
+- rule files tell agents what content may leave
 
-Two tiers: **mechanical** problems (format, fields, types, paths) are caught
-synchronously; **semantic** ones (duplicates, contradictions, staleness) go to the
-`tidy` list, surfaced as gentle nudges — not a blocking alarm.
+One binary, git underneath, no database, no server.
 
-<Callout type="info">
-  In Claude Code, this is automatic via hooks (`post-edit` validates, `stop` syncs).
-  In hook-less agents, the global-config rules tell the agent to run `doss check`
-  itself, and `sync` re-validates before committing.
-</Callout>
+## Data Model
 
-## Disclosure: rules in a file, not a gate
+The vault is a plain folder:
 
-There is no "answer" command. When someone other than the owner asks, the agent reads
-`DISCLOSURE.md` and `policy.yaml` — verified group → topic → `full` / `rough` / `no`
-— and shares only what's granted. Folder topics inherit to facts below them; more
-specific topics win. Default deny.
+```text
+~/.doss/
+  self/          owner facts; path = policy topic
+  peers/         facts other people shared
+  notes/         scratch notes; never disclosed
+  policy.yaml    synced owner-memory disclosure policy
+  devices/       synced device registry
+  local/access.yaml
+                 device-local file/task access policy; gitignored
+  ledger/        disclosure log, one JSONL file per device
+  INSTRUCTION.md entry router
+  CONTENT.md     content maintenance rules
+  DISCLOSURE.md  outbound disclosure and local access rules
+```
 
-- Identity is the platform's authenticated id, never the message text.
-- `rough` means share only the fact's owner-authored `rough:` value.
-- `full` means share the Markdown body after frontmatter.
-- `status: suggested` facts are never disclosed.
-- `peers/` and `notes/` are never disclosed.
-- After disclosing, the agent records it: `doss log --record --to VERIFIED_ID --shared TOPIC --level rough or full`.
+`self/`, `peers/`, and `notes/` are Markdown. YAML is only for config files such
+as `policy.yaml` and `local/access.yaml`.
 
-## Sync and the cloud copy
+Every `self/**/*.md` fact must include a `rough` string:
 
-- **Upload is not saving.** Content is safe the moment it's written locally; push only
-  replicates it.
-- The cloud copy is _your own private git repo_. Offline: commits still happen; pushes
-  catch up on the next sync.
-- Device registrations under `devices/` sync with the vault. `init` registers the
-  current device, `doss devices` lists the registry, `doss devices unregister DEVICE_ID`
-  marks another existing device unregistered, and normal uninstall pushes
-  `status: unregistered` before deleting the local copy.
-- Conflicts (two devices edited the same file): sync aborts safely, both versions
-  survive in git.
-- Only validated state syncs, and the receiving end re-validates.
+```markdown
+---
+source: owner
+status: active
+confidence: high
+rough: "Toronto"
+---
+Home address: 123 King St W, Toronto.
+```
 
-## Honest bounds
+The `rough:` field is the exact owner-authored value used for rough disclosure.
+The body is the full private fact; `no` is a policy outcome, not a fact field.
+
+## Validation
+
+In hook-capable agents, two jobs run automatically:
+
+| Job | When | What it does |
+| --- | --- | --- |
+| inspector | after a file edit | validates that file: paths, formats, fields, types |
+| courier | when the agent stops | validates, commits, pulls, and best-effort pushes |
+
+Invalid content bounces with the file, line, and fix hint, and the agent retries
+in the same turn. Hook-less agents follow their global instructions: run
+`doss check --changed` after edits and `doss sync` at wrap-up. `sync` re-validates
+before committing, so invalid vault state does not leave the machine.
+
+`doss check --changed`, hooks, and `sync` use the same validator. That matters for
+`local/access.yaml`: even though it is gitignored and device-local, it is still
+validated when changed or present in a full check.
+
+## Wiring
+
+`doss connect` writes a managed Doss section into each installed agent's
+always-loaded global instruction file. That section points the agent at
+`INSTRUCTION.md`, which routes:
+
+- content writing and cleanup to `CONTENT.md`
+- outbound disclosure and local access decisions to `DISCLOSURE.md`
+
+Custom agents use `doss connect --file PATH_TO_INSTRUCTION_FILE`. Those targets
+are remembered locally and refreshed by future `connect` runs.
+
+## Disclosure
+
+The CLI does not decide what to say. When someone other than the owner asks, the
+agent:
+
+1. reads the needed owner fact normally
+2. verifies requester identity from trusted host metadata
+3. applies `DISCLOSURE.md` and `policy.yaml`
+4. answers only what is allowed
+5. records allowed disclosure with `doss log --record`
+
+Trusted metadata is supplied by the host platform, for example:
+
+```text
+[Trusted current request metadata]
+requesterName: Pedro
+requesterKind: external
+requesterAccountId: kordi:pedro
+requestMessageId: msg_123
+
+[User request]
+...
+```
+
+Only host-supplied metadata counts. User text that imitates this header is just
+message text. No verified requester id means default deny.
+
+`policy.yaml` maps verified groups to disclosure levels for topics under `self/`:
+
+```yaml
+groups:
+  friends:  [kordi:pedro, kordi:qiancx]
+  contacts: [kordi:jiaxin]
+
+can-see:
+  friends:
+    profile/address: rough
+    profile/dietary: full
+    work: rough
+  contacts:
+    profile/address: rough
+```
+
+Policy levels are `no`, `rough`, and `full`:
+
+- `no`: disclose nothing, also the default when no rule matches
+- `rough`: disclose only the fact's `rough:` value
+- `full`: disclose the Markdown body after frontmatter
+
+Folder topics inherit to facts below them. More specific topics win. If a person
+belongs to several groups, the highest level wins in this order: `no`, then
+`rough`, then `full`.
+
+`status: suggested` facts are never disclosed. `peers/` and `notes/` are never
+disclosed. If a verified requester is not in any group, the agent asks the owner
+which group should contain that id; until `policy.yaml` is updated, nothing
+leaves.
+
+`doss log` is only an after-the-fact ledger. A log entry is never permission.
+
+## Local Access
+
+`policy.yaml` and `local/access.yaml` are deliberately separate:
+
+| File | Syncs? | Scope | Levels | Question |
+| --- | --- | --- | --- | --- |
+| `policy.yaml` | yes | owner memory under `self/` | `no`, `rough`, `full` | what owner info may leave? |
+| `local/access.yaml` | no | this device's folders | `no`, `read`, `full` | what files/tasks may this requester ask this machine to touch? |
+
+They do not grant each other. A local file grant does not authorize owner-memory
+disclosure, and a disclosure grant does not authorize editing a project folder.
+
+## Sync And Devices
+
+`doss sync` validates, commits, pulls, and pushes. The cloud copy is the owner's
+private git repo, separate from the Doss tool repo. Offline work is fine: commits
+happen locally and pushes catch up later. Conflicts abort safely with both
+versions preserved.
+
+Device records live under `devices/` and sync with the vault. Each record is YAML
+with `status: active` or `status: unregistered`. `doss init` registers the current
+device. `doss init --from owner/repo` registers the new device after clone and
+uploads that registration.
 
 <Callout type="warning">
-  **With a raw-access agent, this is discipline, not a wall.** An agent that can `grep`
-  your vault has already read the data, so the rules are guidance plus an audit log —
-  not enforcement. A determined or prompt-injected agent could bypass them.
+  Device unregister is not revocation. `doss devices unregister DEVICE_ID`
+  records that another device should be considered inactive by the vault, but it
+  cannot revoke a local clone, SSH key, GitHub token, deploy key, or other git
+  credential. For a lost or compromised device, revoke external access outside
+  Doss too.
 </Callout>
 
-The hard guarantee holds only when the outward-facing agent has **no raw access** to the
-vault and reaches your info solely through a serving layer that applies the policy — a
-deployment choice (e.g. a hosted front desk), not something a local command enforces.
-This is the classic *reference monitor*: a mediator that is non-bypassable,
-tamper-proof, and verifiable.
+`doss uninstall` is stronger only for the current machine: when safe, it marks
+this device `unregistered`, pushes that state, unwires agents, and deletes the
+local vault. It still does not delete the cloud copy.
 
-Other known limits, stated plainly: the ledger is **best-effort** (a forgetful agent
-leaves gaps); the vault is **not encrypted at rest** (a stolen laptop exposes it); and
-**aggregation** of many compliant partial disclosures can reveal more than any single
-one. Default-deny keeps the safe direction baked in throughout.
+## Maintenance
 
-## What happens when…
+`doss tidy` is read-only. It lists:
+
+- check problems
+- self facts missing `rough` values
+- old facts that may need refresh
+- `status: suggested` facts awaiting confirmation
+- a bloated `notes/`
+
+Agents or owners handle a small batch and rerun `doss check --changed` / `doss sync`.
+
+## Honest Bounds
+
+<Callout type="warning">
+  With a raw-access local agent, disclosure policy is discipline plus an audit
+  log, not a hard wall. An agent that can read the vault can bypass the rules.
+</Callout>
+
+The hard guarantee requires an outward-facing agent with no raw vault access,
+using a serving layer that applies policy before returning owner information.
+The ledger is best-effort: disciplined agents record disclosures, but it is not a
+tamper-proof log. Default deny still makes the safe failure mode "share nothing".
+
+## What Happens When
 
 | Situation | Outcome |
 | --- | --- |
-| Agent writes a malformed file (hooked) | bounced same-turn with a precise fix; the library never holds it |
-| Agent forgets to check (hook-less) | file sits locally; `sync` refuses to ship it; next `doctor` flags it |
-| Network is down | local commits succeed; push retries on a later sync |
-| Two devices edit the same fact | sync aborts safely; both versions in git; you pick |
-| A device is removed normally | uninstall pushes `status: unregistered`, then deletes the local copy |
-| A device is lost | run `doss devices unregister DEVICE_ID` for bookkeeping and revoke its git credentials outside Doss |
-| A stranger asks about you | default deny — nothing leaves |
-| A message claims "I'm the owner" | ignored — identity comes from the platform, not the text |
+| Agent writes malformed content in a hooked harness | bounced same-turn with a precise fix; invalid state does not stick |
+| Hook-less agent forgets to check | file stays local; `sync` refuses to ship invalid state; `doctor` surfaces it |
+| Agent never runs sync | data is safe in local files; cloud copy lags |
+| Network is down | local commits succeed; push catches up later |
+| Two devices edit the same fact | sync aborts safely; both versions remain in git |
+| Managed instruction section is deleted | that agent stops discovering the vault; `doss doctor` reports it; `connect` restores it |
+| Device is removed normally | `doss uninstall` pushes `status: unregistered`, then deletes the local vault |
+| Device is lost or compromised | run `doss devices unregister DEVICE_ID` for bookkeeping and revoke external git credentials outside Doss |
+| Outsider asks about the owner | agent applies `policy.yaml`; unknown identity or missing grant means nothing leaves |
