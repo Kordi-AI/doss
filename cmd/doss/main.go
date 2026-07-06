@@ -19,7 +19,7 @@ usage: doss <command> [flags]
   sync     commit + pull + push the vault (refuses if check fails)
   doctor   full health: vault stats, sync, wiring, hooks, tidy hints; --fix repairs (alias: status)
   devices  list device registrations
-  unregister  revoke a non-current device's recorded deploy key, then mark it inactive
+  unregister  choose a non-current device to revoke, then mark it inactive
   tidy     dirt report: stale facts, unconfirmed guesses, notes backlog
   uninstall  delete the local vault and unwire agents (safe when a cloud copy exists)
   hook     harness hook endpoint (post-edit, stop) — wired by connect
