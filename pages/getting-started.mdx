@@ -27,11 +27,12 @@ Paste this to your agent:
 > Please install Doss and set up my memory vault:
 > 1. `git clone https://github.com/Kordi-AI/doss && cd doss && ./install.sh`
 > 2. **Ask me** which name and email my vault's git commits should use, then run
->    `doss init --github --git-name "…" --git-email "…"` (drop `--github` to stay
->    local; use `--from owner/repo` if I already have a cloud vault).
+>    `doss init --git-name "…" --git-email "…"`. Use `--from owner/repo` if I
+>    already have a cloud vault. Use `--github --repo my-doss` only if I ask for
+>    a new private GitHub backup now.
 > 3. Check the `connect` output: if your own tool isn't listed, wire yourself with
 >    `doss connect --file <the instruction file you load every session>`.
-> 4. Read `~/.doss/SKILL.md` and manage my memory by its rules from now on.
+> 4. Read `~/.doss/INSTRUCTION.md` and manage my memory by its rules from now on.
 
   </Tabs.Tab>
 </Tabs>
@@ -57,9 +58,8 @@ Back the vault up to a **private GitHub repo** (it takes a token if `gh` isn't l
 </Steps>
 
 <Callout type="info">
-  **Second device?** Run `doss init` and pick *"connect to my existing cloud
-  vault"* — give it your repo (e.g. `you/my-doss`). Every device then shares one
-  memory, kept aligned by `doss sync`.
+  **Second device?** Run `doss init --from you/my-doss`. Every device then shares
+  one memory, kept aligned by `doss sync`.
 </Callout>
 
 ## Wire your agents
@@ -80,7 +80,7 @@ Verify anytime with `doss doctor` (`--fix` repairs). Undo with `doss connect --r
 
 ## The four habits
 
-After setup, an agent only needs these (details in the generated `~/.doss/SKILL.md`):
+After setup, an agent only needs these (details in the generated `~/.doss/INSTRUCTION.md`):
 
 | When | Do |
 | --- | --- |

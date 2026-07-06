@@ -10,51 +10,60 @@ Your vault is a plain folder (default `~/.doss`), synced across devices with git
 ~/.doss/
   self/          facts about you; the path IS the topic (self/profile/dietary.md)
   peers/         what other people shared with you
-  notes/         scratch — never leaves this machine
-  policy.yaml    disclosure rules: who may see which folders (syncs)
+  notes/         markdown scratch; never shared
+  policy.yaml    disclosure rules: who may see each topic as no/rough/full (syncs)
   ledger/        the disclosure log, one append-only file per device
   local/         device-only settings (gitignored, never syncs)
     access.yaml  what your agent may DO with this device's folders, per group
-  SKILL.md       the one-pager your agents follow
+  INSTRUCTION.md entry rules agents read first
+  CONTENT.md     content maintenance rules
+  DISCLOSURE.md  outbound disclosure and local access rules
 ```
 
-A **fact** is a small markdown file with optional YAML frontmatter. All fields are
-optional; git records time.
+A **fact** is a small markdown file with YAML frontmatter. Every `self/**/*.md`
+fact needs `rough`, the owner-authored coarse value used for rough disclosure.
+Git records time.
 
 ```markdown
-<!-- self/profile/dietary.md -->
+<!-- self/profile/address.md -->
 ---
-source: owner        # owner | imported | inferred | peer
-confidence: high     # high | medium | low, or 0–1
+source: owner
+status: active
+confidence: high
+rough: "Toronto"
 ---
-- peanut allergy (severe)
-- no organ meats
+Home address: 123 King St W, Toronto.
 ```
 
 ## Disclosure — `policy.yaml`
 
-`policy.yaml` answers **who can SEE what**. It maps groups of people to the folders
-under `self/` they may see. This is your portable preference, so it **syncs** across
-devices.
+`policy.yaml` answers **who can SEE what**. It maps groups of verified people to
+disclosure levels for topics under `self/`: `no`, `rough`, or `full`. This is your
+portable preference, so it **syncs** across devices.
 
 ```yaml
 groups:
   friends:  [kordi:pedro, kordi:qiancx]
   contacts: [kordi:jiaxin]
 can-see:
-  friends:  [profile, work]   # everything under self/profile/ and self/work/
-  contacts: [profile]         # only self/profile/
-  # anything not listed: nothing
+  friends:
+    profile/address: rough   # share only the file's rough value
+    profile/dietary: full    # share the full Markdown body
+    work: rough              # applies to everything under self/work/
+  contacts:
+    profile/address: rough
+  # anything not listed: no disclosure
 ```
 
-Rules are **by folder, not by fact**: adding a new fact under `self/profile/` needs
-no policy edit (it inherits the folder's rule), and adding a group is one block.
-**Default is deny.** A person in several groups sees the union of their groups' folders.
+Topics are paths without the `self/` prefix. A topic may name a folder (`work`) or
+a specific fact (`profile/address`). Folder rules inherit to facts below them, and
+a more specific topic wins. **Default is deny.** A person in several groups gets
+the highest granted level, ordered `no < rough < full`.
 
 <Callout type="info">
-  **Graded values** are data, not a rule. To share a city instead of a street, add
-  a `public_value:` field to the fact — your agent shares that, never the raw
-  content. You author the shareable version.
+  `rough:` is the only value an agent may share for a `rough` grant. The Markdown
+  body after frontmatter is the full private fact. There is no `full:` field and
+  no `no:` field inside a fact.
 </Callout>
 
 ## Device access — `local/access.yaml`
@@ -80,8 +89,9 @@ Three levels: `no` (don't touch it for them) · `read` (read/share files there) 
 ## Multi-device
 
 Every device holds a full copy of the vault. `doss sync` (git underneath) keeps them
-aligned; conflicts abort safely with both versions preserved. Device-specific things
-never sync: `local/` and each device's own ledger file.
+aligned; conflicts abort safely with both versions preserved. `local/` never syncs.
+Ledger files do sync, but each device appends to its own file under `ledger/` so
+devices do not fight over one log file.
 
 ## Identity
 

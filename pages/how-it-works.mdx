@@ -12,8 +12,8 @@ No intermediate steps. In the background, a small helper validates every write,
 syncs to your other devices, and periodically flags what needs your judgment.
 
 **Someone else asks — the cold path.** Only then do the disclosure rules matter. The
-agent finds the info the normal way, then follows `policy.yaml` (and, for actions on
-files, `local/access.yaml`). Everything is plain files it reads.
+agent finds the info the normal way, then follows `DISCLOSURE.md` and `policy.yaml`
+(and, for actions on files, `local/access.yaml`). Everything is plain files it reads.
 
 ## Validation: bounce and retry
 
@@ -35,14 +35,16 @@ synchronously; **semantic** ones (duplicates, contradictions, staleness) go to t
 ## Disclosure: rules in a file, not a gate
 
 There is no "answer" command. When someone other than the owner asks, the agent reads
-`policy.yaml` — group → folders they may see — and shares only what's granted. Adding a
-fact never means editing policy (rules are by folder); adding a group is one block.
-Default deny.
+`DISCLOSURE.md` and `policy.yaml` — verified group → topic → `full` / `rough` / `no`
+— and shares only what's granted. Folder topics inherit to facts below them; more
+specific topics win. Default deny.
 
 - Identity is the platform's authenticated id, never the message text.
-- A fact with `public_value:` is shared as that value, never the raw content.
+- `rough` means share only the fact's owner-authored `rough:` value.
+- `full` means share the Markdown body after frontmatter.
+- `status: suggested` facts never leave.
 - `peers/` and `notes/` never leave.
-- After disclosing, the agent records it: `doss log --record`.
+- After disclosing, the agent records it: `doss log --record --to <verified-id> --shared <topic> --level rough|full`.
 
 ## Sync and the cloud copy
 
