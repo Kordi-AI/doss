@@ -67,7 +67,8 @@ For cloud sync and multi-device setup, see the
 | `doss connect` | Wire the vault into installed agents; rerun after installing a new agent. |
 | `doss check` | Validate memory files; `--changed` checks only files touched since the last commit. |
 | `doss sync` | Commit, pull, and push; refuses to sync invalid vault state. |
-| `doss devices` | List synced device registrations; `unregister <id>` revokes its recorded GitHub deploy key, then marks it inactive. |
+| `doss devices` | List synced device registrations. |
+| `doss unregister <id>` | Revoke a non-current device's recorded GitHub deploy key, then mark it inactive. |
 | `doss log` | Record or read the disclosure ledger; records include `--level rough|full`. |
 | `doss doctor` | Show vault health, sync, wiring, hooks, and tidy hints; `--fix` repairs wiring. |
 | `doss tidy` | List stale facts, unconfirmed guesses, and notes backlog for owner judgment. |
