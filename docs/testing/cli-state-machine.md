@@ -35,17 +35,34 @@ wiring.
 | `doss doctor --fix` | full local installation state | safe repairs for hooks/wiring | vault missing for repairs that need a vault |
 | `doss log --record` | disclosure arguments | ledger entry | recipient id, topic, or level is invalid |
 
-## Test layers
+## Review workflow
 
-| Layer | Use it for | Do not use it for |
+Use this document as the first pass whenever a command changes:
+
+1. Pick the command and fill in its row: what it reads, what it writes, and what
+   must stop it.
+2. Cross the command with every relevant state axis above. Ignore only states
+   that the command truly cannot observe.
+3. For each reachable state, classify the behavior as one of:
+   - **success**: the command completes and writes only its declared outputs.
+   - **refuse**: the command stops before mutation with a concrete error.
+   - **fallback**: the command safely does less, never more. Example: requester
+     views omit facts missing required `rough` values.
+4. Check consistency with neighboring commands. If `doss check --changed`,
+   hooks, full `doss check`, and `doss view` see the same bad state, they should
+   agree on whether it blocks, nudges, or safely omits.
+5. Lock important cells with focused Go tests when the command has code paths
+   that are easy to regress.
+
+## MVP cells to keep covered
+
+| Command | State combination | Expected behavior |
 | --- | --- | --- |
-| Go unit tests | Pure parsing, validators, specific helper functions | Long command flows that need real files and git |
-| `testscript` | Real CLI workflows with readable setup, assertions, and filesystem state | Pixel-perfect terminal demos |
-| VHS tapes | Optional visual demos for docs and release smoke checks | Required CI validation or source of truth |
-| Manual sandbox | Real GitHub/device-key testing after the MVP stabilizes | Routine local validation |
-
-Current pilot scenarios live in `cmd/doss/testdata/script/`:
-
-- `connect_custom.txt`: unknown-agent wiring, refresh, and remove.
-- `view_requester_fallback.txt`: policy plus local access, with missing rough
-  conservatively omitted from requester views.
+| `doss connect` | custom target exists, managed section is stale | refresh in place without deleting user text |
+| `doss connect --remove` | saved custom target exists | remove managed section and clear local custom target config |
+| `doss check --changed` | `policy.yaml` now grants `rough` for an existing fact without `rough:` | report `E_ROUGH` for that fact |
+| `doss view` | same missing-rough state | omit that fact and record it in `manifest.json` |
+| `doss view` | malformed `local/access.yaml` | refuse export |
+| `doss sync` | current device is `deactivated` after pull | refuse before pushing new owner facts |
+| `doss deactivate` | target is current device | refuse |
+| `doss uninstall` | cloud copy exists and clean | deactivate current device, push that state, then remove local vault |
