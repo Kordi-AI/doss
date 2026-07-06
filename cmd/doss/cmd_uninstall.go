@@ -92,15 +92,15 @@ func cmdUninstall(args []string) error {
 	// Do it: unwire first (needs the vault path), then remove the directory.
 	if hasRemote && safe {
 		id := vault.DeviceID(d)
-		if _, err := vault.UnregisterDevice(d, id); err != nil {
+		if _, err := vault.DeactivateDevice(d, id); err != nil {
 			return err
 		}
-		if err := syncGit(d, "doss: unregister device "+id, true); err != nil {
-			return fmt.Errorf("device was marked unregistered locally, but upload failed; vault was not deleted: %w", err)
+		if err := syncGit(d, "doss: deactivate device "+id, true); err != nil {
+			return fmt.Errorf("device was marked deactivated locally, but upload failed; vault was not deleted: %w", err)
 		}
-		fmt.Printf("✓ device unregistered: %s\n", id)
+		fmt.Printf("✓ device deactivated: %s\n", id)
 		if revoked, err := revokeDeviceDeployKey(d, id); err != nil {
-			return fmt.Errorf("device was marked unregistered, but deploy key revocation failed; vault was not deleted: %w", err)
+			return fmt.Errorf("device was marked deactivated, but deploy key revocation failed; vault was not deleted: %w", err)
 		} else if revoked {
 			fmt.Printf("✓ GitHub deploy key revoked: %s\n", id)
 		}

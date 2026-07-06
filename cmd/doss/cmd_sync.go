@@ -57,8 +57,8 @@ func ensureCurrentDeviceCanSync(d string) error {
 		}
 		return err
 	}
-	if dev.Status == "unregistered" {
-		return fmt.Errorf("this device (%s) is unregistered; refusing to sync. Reattach it with `doss init --from <repo>` after the owner approves a new device key", id)
+	if dev.Status == "deactivated" {
+		return fmt.Errorf("this device (%s) is deactivated; refusing to sync. Reattach it with `doss init --from <repo>` after the owner approves a new device key", id)
 	}
 	return nil
 }

@@ -179,23 +179,23 @@ func TestSyncUsesCurrentBranchWhenNoUpstream(t *testing.T) {
 	}
 }
 
-func TestSyncRefusesUnregisteredCurrentDevice(t *testing.T) {
+func TestSyncRefusesDeactivatedCurrentDevice(t *testing.T) {
 	dir := initTestVault(t)
 	t.Setenv("DOSS_HOME", dir)
 	dev, err := vault.RegisterDevice(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := vault.UnregisterDevice(dir, dev.ID); err != nil {
+	if _, err := vault.DeactivateDevice(dir, dev.ID); err != nil {
 		t.Fatal(err)
 	}
 
 	err = cmdSync([]string{"--quiet"})
 	if err == nil {
-		t.Fatal("sync should refuse an unregistered current device")
+		t.Fatal("sync should refuse a deactivated current device")
 	}
-	if !strings.Contains(err.Error(), "is unregistered") {
-		t.Fatalf("sync should explain unregistered device, got: %v", err)
+	if !strings.Contains(err.Error(), "is deactivated") {
+		t.Fatalf("sync should explain deactivated device, got: %v", err)
 	}
 }
 
@@ -222,12 +222,12 @@ func TestUninstallPushesDeviceUnregistration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("remote device registration missing:\n%s", out)
 	}
-	if !strings.Contains(string(out), "status: unregistered") {
-		t.Fatalf("uninstall should push unregistered status, got:\n%s", out)
+	if !strings.Contains(string(out), "status: deactivated") {
+		t.Fatalf("uninstall should push deactivated status, got:\n%s", out)
 	}
 }
 
-func TestUnregistersAnotherRegisteredDevice(t *testing.T) {
+func TestDeactivateAnotherRegisteredDevice(t *testing.T) {
 	dir := initTestVault(t)
 	t.Setenv("DOSS_HOME", dir)
 	if _, err := vault.RegisterDevice(dir); err != nil {
@@ -235,48 +235,48 @@ func TestUnregistersAnotherRegisteredDevice(t *testing.T) {
 	}
 	old := "old-device"
 	oldFile := filepath.Join(dir, "devices", old+".yaml")
-	if err := os.WriteFile(oldFile, []byte("id: old-device\nlabel: Old Device\nstatus: active\nregistered_at: \"2026-07-05T12:00:00Z\"\nunregistered_at: \"\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(oldFile, []byte("id: old-device\nlabel: Old Device\nstatus: active\nregistered_at: \"2026-07-05T12:00:00Z\"\ndeactivated_at: \"\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGit(t, dir, "add", "-A")
 	runGit(t, dir, "commit", "-m", "devices")
 
-	if err := cmdUnregister([]string{vault.DeviceID(dir)}); err == nil {
-		t.Fatal("unregister should reject the current device")
+	if err := cmdDeactivate([]string{vault.DeviceID(dir)}); err == nil {
+		t.Fatal("deactivate should reject the current device")
 	}
-	if err := cmdUnregister([]string{"missing-device"}); err == nil {
-		t.Fatal("unregister should reject unknown devices")
+	if err := cmdDeactivate([]string{"missing-device"}); err == nil {
+		t.Fatal("deactivate should reject unknown devices")
 	}
-	if err := cmdUnregister(nil); err == nil || !strings.Contains(err.Error(), "choose a device") {
-		t.Fatalf("unregister without id should require an interactive terminal, got: %v", err)
+	if err := cmdDeactivate(nil); err == nil || !strings.Contains(err.Error(), "choose a device") {
+		t.Fatalf("deactivate without id should require an interactive terminal, got: %v", err)
 	}
-	if err := cmdUnregister([]string{old}); err != nil {
+	if err := cmdDeactivate([]string{old}); err != nil {
 		t.Fatal(err)
 	}
 	raw, err := os.ReadFile(oldFile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(raw), "status: unregistered") {
-		t.Fatalf("device should be marked unregistered, got:\n%s", raw)
+	if !strings.Contains(string(raw), "status: deactivated") {
+		t.Fatalf("device should be marked deactivated, got:\n%s", raw)
 	}
 
 	alias := "alias-device"
 	aliasFile := filepath.Join(dir, "devices", alias+".yaml")
-	if err := os.WriteFile(aliasFile, []byte("id: alias-device\nlabel: Alias Device\nstatus: active\nregistered_at: \"2026-07-05T12:00:00Z\"\nunregistered_at: \"\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(aliasFile, []byte("id: alias-device\nlabel: Alias Device\nstatus: active\nregistered_at: \"2026-07-05T12:00:00Z\"\ndeactivated_at: \"\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	runGit(t, dir, "add", "-A")
 	runGit(t, dir, "commit", "-m", "alias device")
-	if err := cmdDevices([]string{"unregister", alias}); err != nil {
+	if err := cmdDevices([]string{"deactivate", alias}); err != nil {
 		t.Fatal(err)
 	}
 	raw, err = os.ReadFile(aliasFile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(raw), "status: unregistered") {
-		t.Fatalf("devices unregister alias should still work, got:\n%s", raw)
+	if !strings.Contains(string(raw), "status: deactivated") {
+		t.Fatalf("devices deactivate alias should work, got:\n%s", raw)
 	}
 }
 

@@ -631,7 +631,7 @@ func checkDeviceFile(dir, rel string) []Issue {
 		Label                string `yaml:"label"`
 		Status               string `yaml:"status"`
 		RegisteredAt         string `yaml:"registered_at"`
-		UnregisteredAt       string `yaml:"unregistered_at"`
+		DeactivatedAt        string `yaml:"deactivated_at"`
 		GitHubRepo           string `yaml:"github_repo"`
 		DeployKeyID          int64  `yaml:"deploy_key_id"`
 		DeployKeyTitle       string `yaml:"deploy_key_title"`
@@ -663,20 +663,20 @@ func checkDeviceFile(dir, rel string) []Issue {
 	}
 	switch dev.Status {
 	case "active":
-		if strings.TrimSpace(dev.UnregisteredAt) != "" {
+		if strings.TrimSpace(dev.DeactivatedAt) != "" {
 			issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
-				Msg: "active devices must not set unregistered_at"})
+				Msg: "active devices must not set deactivated_at"})
 		}
-	case "unregistered":
-		if dev.UnregisteredAt == "" {
-			issues = append(issues, Issue{File: rel, Code: "E_DEVICE", Msg: "unregistered device missing unregistered_at"})
-		} else if _, err := time.Parse(time.RFC3339, dev.UnregisteredAt); err != nil {
-			issues = append(issues, Issue{File: rel, Code: "E_DEVICE", Msg: "unregistered_at must be RFC3339"})
+	case "deactivated":
+		if dev.DeactivatedAt == "" {
+			issues = append(issues, Issue{File: rel, Code: "E_DEVICE", Msg: "deactivated device missing deactivated_at"})
+		} else if _, err := time.Parse(time.RFC3339, dev.DeactivatedAt); err != nil {
+			issues = append(issues, Issue{File: rel, Code: "E_DEVICE", Msg: "deactivated_at must be RFC3339"})
 		}
 	default:
 		issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
 			Msg:  fmt.Sprintf("invalid device status %q", dev.Status),
-			Hint: "status must be active or unregistered"})
+			Hint: "status must be active or deactivated"})
 	}
 	if dev.GitHubRepo != "" && !githubRepoRe.MatchString(dev.GitHubRepo) {
 		issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
