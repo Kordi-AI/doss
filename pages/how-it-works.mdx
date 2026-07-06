@@ -31,9 +31,10 @@ The vault is a plain folder:
   peers/         facts other people shared
   notes/         scratch notes; never disclosed
   policy.yaml    synced owner-memory disclosure policy
-  devices/       synced device registry
+  devices/       synced device registry plus GitHub deploy-key metadata
   local/access.yaml
                  device-local file/task access policy; gitignored
+  local/keys/    device-local SSH keys for GitHub vault sync; gitignored
   ledger/        disclosure log, one JSONL file per device
   INSTRUCTION.md entry router
   CONTENT.md     content maintenance rules
@@ -174,21 +175,31 @@ happen locally and pushes catch up later. Conflicts abort safely with both
 versions preserved.
 
 Device records live under `devices/` and sync with the vault. Each record is YAML
-with `status: active` or `status: unregistered`. `doss init` registers the current
-device. `doss init --from owner/repo` registers the new device after clone and
-uploads that registration.
+with `status: active` or `status: unregistered`. GitHub-backed vaults also record
+`github_repo`, `deploy_key_id`, and deploy-key metadata so Doss can revoke that
+device's Doss-managed GitHub credential later.
+
+`doss init` registers the current device. For GitHub-backed vaults, it creates a
+device-local SSH key under `local/keys/`, adds the public key to the private repo
+as a writable GitHub deploy key, stores the deploy-key id in `devices/`, and
+uses that key for future sync. `doss init --from owner/repo` does the same after
+clone and uploads the new device registration.
 
 <Callout type="warning">
-  Device unregister is not revocation. `doss devices unregister DEVICE_ID`
-  records that another device should be considered inactive by the vault, but it
-  cannot revoke a local clone, SSH key, GitHub token, deploy key, or other git
-  credential. For a lost or compromised device, revoke external access outside
-  Doss too.
+  Device unregister has two layers. The soft layer writes `status:
+  unregistered`, and honest Doss clients refuse future sync from that device. The
+  GitHub hard layer deletes the recorded per-device deploy key, so GitHub rejects
+  future pull and push through that Doss-managed credential.
 </Callout>
 
-`doss uninstall` is stronger only for the current machine: when safe, it marks
-this device `unregistered`, pushes that state, unwires agents, and deletes the
-local vault. It still does not delete the cloud copy.
+This still cannot erase a local plaintext clone that already exists, and it
+cannot revoke separate owner account credentials such as GitHub sessions, PATs,
+or personal SSH keys. For a lost device, revoke those outside Doss too.
+
+`doss uninstall` handles the current machine: when safe, it marks this device
+`unregistered`, pushes that state, revokes its recorded GitHub deploy key when
+present, unwires agents, and deletes the local vault. It still does not delete
+the cloud copy.
 
 ## Maintenance
 
@@ -224,6 +235,6 @@ tamper-proof log. Default deny still makes the safe failure mode "share nothing"
 | Network is down | local commits succeed; push catches up later |
 | Two devices edit the same fact | sync aborts safely; both versions remain in git |
 | Managed instruction section is deleted | that agent stops discovering the vault; `doss doctor` reports it; `connect` restores it |
-| Device is removed normally | `doss uninstall` pushes `status: unregistered`, then deletes the local vault |
-| Device is lost or compromised | run `doss devices unregister DEVICE_ID` for bookkeeping and revoke external git credentials outside Doss |
+| Device is removed normally | `doss uninstall` pushes `status: unregistered`, revokes its recorded GitHub deploy key, then deletes the local vault |
+| Device is lost or compromised | run `doss devices unregister DEVICE_ID` to revoke its recorded GitHub deploy key and block Doss-managed sync; also revoke any separate GitHub sessions, PATs, or personal SSH keys outside Doss |
 | Outsider asks about the owner | agent applies `policy.yaml`; unknown identity or missing grant means nothing leaves |

@@ -53,7 +53,9 @@ The name and email your vault's git commits are signed with — Doss asks rather
 
 ### Optional cloud backup
 
-Back the vault up to a **private GitHub repo** (it takes a token if `gh` isn't logged in). This enables sync and additional devices.
+Back the vault up to a **private GitHub repo**. Doss uses `gh` or a token to
+create the repo and install this device's writable deploy key, then future sync
+uses that device key. This enables sync and additional devices.
 
 </Steps>
 

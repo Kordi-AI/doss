@@ -14,6 +14,7 @@ git. Agents remember and recall by reading and writing files.
   notes/         Markdown scratch; never disclosed
   policy.yaml    synced disclosure rules for owner memory
   devices/       synced active/unregistered device records
+                 plus GitHub deploy-key metadata when available
   ledger/        disclosure log, one append-only JSONL file per device
   local/
     access.yaml  device-local access rules; gitignored, never synced
@@ -127,17 +128,21 @@ and `policy.yaml` is updated, nothing leaves.
 ## Devices
 
 Every device has a synced YAML record under `devices/` with `status: active` or
-`status: unregistered`. `doss init` registers the current device and prints the
-same list as `doss devices`. `doss uninstall` marks the current device
-`unregistered`, pushes that state when possible, and then deletes the local
-vault.
+`status: unregistered`. GitHub-backed vaults also store the repository and
+deploy-key id for that device. `doss init` registers the current device, installs
+a per-device writable GitHub deploy key when the vault is GitHub-backed, and
+prints the same list as `doss devices`.
+
+`doss uninstall` marks the current device `unregistered`, pushes that state when
+possible, revokes its recorded GitHub deploy key when present, and then deletes
+the local vault.
 
 <Callout type="warning">
-  `doss devices unregister DEVICE_ID` is bookkeeping, not security revocation.
-  It marks another registered device as `unregistered` in the synced registry,
-  but it cannot revoke git credentials, SSH keys, GitHub tokens, or a local copy
-  that already exists. For a lost or compromised device, revoke its external
-  access outside Doss too.
+  `doss devices unregister DEVICE_ID` first revokes the recorded GitHub deploy
+  key when present, then marks another registered device as `unregistered`.
+  Honest Doss clients refuse sync from an unregistered device. This still cannot
+  erase a local plaintext clone or revoke separate owner account credentials
+  such as GitHub sessions, PATs, or personal SSH keys.
 </Callout>
 
 ## Agent Rule Files
