@@ -133,6 +133,138 @@ func TestDoctorFixDoesNotWireMissingVault(t *testing.T) {
 	}
 }
 
+func TestConnectWiresUpdatesAndRemovesPresetAgentFile(t *testing.T) {
+	home := t.TempDir()
+	dir := initTestVault(t)
+	t.Setenv("HOME", home)
+	t.Setenv("DOSS_HOME", dir)
+
+	codex := filepath.Join(home, ".codex", "AGENTS.md")
+	if err := os.MkdirAll(filepath.Dir(codex), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(codex, []byte("# existing rules\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cmdConnect(nil); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(codex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(raw)
+	if !strings.Contains(content, beginMark) || !strings.Contains(content, "Long-term preferences") {
+		t.Fatalf("connect should add the managed Doss section, got:\n%s", content)
+	}
+	if strings.Contains(content, "\n\tLong-term preferences") {
+		t.Fatalf("managed section body should be plain Markdown prose, got:\n%s", content)
+	}
+
+	if err := os.WriteFile(codex, []byte("# existing rules\n\n"+beginMark+"\nstale\n"+endMark+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdConnect(nil); err != nil {
+		t.Fatal(err)
+	}
+	raw, err = os.ReadFile(codex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content = string(raw)
+	if strings.Contains(content, "stale") || strings.Count(content, beginMark) != 1 {
+		t.Fatalf("connect should update the existing managed section in place, got:\n%s", content)
+	}
+
+	if err := cmdConnect([]string{"--remove"}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err = os.ReadFile(codex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), beginMark) || strings.Contains(string(raw), endMark) {
+		t.Fatalf("connect --remove should strip the managed section, got:\n%s", raw)
+	}
+}
+
+func TestConnectCustomFilePersistsRefreshesAndRemoves(t *testing.T) {
+	home := t.TempDir()
+	dir := initTestVault(t)
+	t.Setenv("HOME", home)
+	t.Setenv("DOSS_HOME", dir)
+
+	custom := filepath.Join(home, "agent", "GLOBAL.md")
+	if err := cmdConnect([]string{"--file", custom}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(custom)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), beginMark) {
+		t.Fatalf("connect --file should write the custom target, got:\n%s", raw)
+	}
+
+	if err := os.WriteFile(custom, []byte(beginMark+"\nstale\n"+endMark+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdConnect(nil); err != nil {
+		t.Fatal(err)
+	}
+	raw, err = os.ReadFile(custom)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "stale") || !strings.Contains(string(raw), "INSTRUCTION.md") {
+		t.Fatalf("future connect runs should refresh saved custom targets, got:\n%s", raw)
+	}
+
+	if err := cmdConnect([]string{"--remove"}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err = os.ReadFile(custom)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), beginMark) {
+		t.Fatalf("connect --remove should strip saved custom targets, got:\n%s", raw)
+	}
+	if targets := loadCustomTargets(); len(targets) != 0 {
+		t.Fatalf("connect --remove should clear saved custom targets, got %v", targets)
+	}
+}
+
+func TestDoctorFixRepairsAgentWiring(t *testing.T) {
+	home := t.TempDir()
+	dir := initTestVault(t)
+	t.Setenv("HOME", home)
+	t.Setenv("DOSS_HOME", dir)
+	if _, err := vault.RegisterDevice(dir); err != nil {
+		t.Fatal(err)
+	}
+
+	codex := filepath.Join(home, ".codex", "AGENTS.md")
+	if err := os.MkdirAll(filepath.Dir(codex), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(codex, []byte("# existing rules\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := captureStdout(t, func() error { return cmdDoctor([]string{"--fix"}) }); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(codex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), beginMark) || !strings.Contains(string(raw), "INSTRUCTION.md") {
+		t.Fatalf("doctor --fix should repair missing agent wiring, got:\n%s", raw)
+	}
+}
+
 func TestChangedCheckIncludesGitignoredLocalAccess(t *testing.T) {
 	dir := initTestVault(t)
 	t.Setenv("DOSS_HOME", dir)
