@@ -42,8 +42,8 @@ specific topics win. Default deny.
 - Identity is the platform's authenticated id, never the message text.
 - `rough` means share only the fact's owner-authored `rough:` value.
 - `full` means share the Markdown body after frontmatter.
-- `status: suggested` facts never leave.
-- `peers/` and `notes/` never leave.
+- `status: suggested` facts are never disclosed.
+- `peers/` and `notes/` are never disclosed.
 - After disclosing, the agent records it: `doss log --record --to <verified-id> --shared <topic> --level rough|full`.
 
 ## Sync and the cloud copy
@@ -52,6 +52,10 @@ specific topics win. Default deny.
   replicates it.
 - The cloud copy is _your own private git repo_. Offline: commits still happen; pushes
   catch up on the next sync.
+- Device registrations under `devices/` sync with the vault. `init` registers the
+  current device, `doss devices` lists the registry, `doss devices unregister <id>`
+  marks another existing device unregistered, and normal uninstall pushes
+  `status: unregistered` before deleting the local copy.
 - Conflicts (two devices edited the same file): sync aborts safely, both versions
   survive in git.
 - Only validated state syncs, and the receiving end re-validates.
@@ -83,5 +87,7 @@ one. Default-deny keeps the safe direction baked in throughout.
 | Agent forgets to check (hook-less) | file sits locally; `sync` refuses to ship it; next `doctor` flags it |
 | Network is down | local commits succeed; push retries on a later sync |
 | Two devices edit the same fact | sync aborts safely; both versions in git; you pick |
+| A device is removed normally | uninstall pushes `status: unregistered`, then deletes the local copy |
+| A device is lost | run `doss devices unregister <id>` for bookkeeping and revoke its git credentials outside Doss |
 | A stranger asks about you | default deny — nothing leaves |
 | A message claims "I'm the owner" | ignored — identity comes from the platform, not the text |

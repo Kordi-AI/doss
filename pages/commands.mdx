@@ -9,6 +9,7 @@
 | `doss check` | Validate memory files; bad writes bounce with precise, fixable errors. `--changed` checks only files touched since the last commit. |
 | `doss sync` | Commit + pull + push. Only validated state ever leaves; conflicts abort safely. |
 | `doss doctor` | Full health: vault stats, sync state, agent wiring, hooks, tidy hints. `--fix` repairs wiring. Alias: `status`. |
+| `doss devices` | List synced device registrations, marking the current device and active vs. unregistered status. `unregister <id>` marks an already-registered non-current device unregistered. |
 | `doss tidy` | What needs your judgment: stale facts, unconfirmed guesses, notes backlog. Read-only. |
 | `doss log` | `--record --to <verified-id> --shared <topic> --level rough|full` notes a disclosure; plain `doss log` reads "who knows what about me" across all devices. |
 | `doss uninstall` | Delete the local vault and unwire agents (safe when a cloud copy exists; refuses otherwise unless `--force`). |
@@ -18,7 +19,7 @@
 
 - **Agents, automatically** — `check` (via hooks after edits), `sync` (at session end).
 - **Agents, when acting for others** — `log --record --to <verified-id> --shared <topic> --level rough|full` after an allowed disclosure.
-- **You** — `init`, `doctor`, `tidy`, `uninstall`, and editing `policy.yaml` / `local/access.yaml`.
+- **You** — `init`, `devices`, `doctor`, `tidy`, `uninstall`, and editing `policy.yaml` / `local/access.yaml`.
 
 ## Frontmatter fields
 

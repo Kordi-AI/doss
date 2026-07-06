@@ -12,6 +12,7 @@ Your vault is a plain folder (default `~/.doss`), synced across devices with git
   peers/         what other people shared with you
   notes/         markdown scratch; never shared
   policy.yaml    disclosure rules: who may see each topic as no/rough/full (syncs)
+  devices/       synced device registry; active/unregistered YAML per device
   ledger/        the disclosure log, one append-only file per device
   local/         device-only settings (gitignored, never syncs)
     access.yaml  what your agent may DO with this device's folders, per group
@@ -89,9 +90,17 @@ Three levels: `no` (don't touch it for them) · `read` (read/share files there) 
 ## Multi-device
 
 Every device holds a full copy of the vault. `doss sync` (git underneath) keeps them
-aligned; conflicts abort safely with both versions preserved. `local/` never syncs.
-Ledger files do sync, but each device appends to its own file under `ledger/` so
-devices do not fight over one log file.
+aligned; conflicts abort safely with both versions preserved. `devices/` syncs and
+records which devices are `active` or `unregistered`; old records stay so ledger
+files remain interpretable. `local/` never syncs. Ledger files do sync, but each
+device appends to its own file under `ledger/` so devices do not fight over one log
+file.
+
+`doss init` registers the current device and prints the same list as `doss devices`.
+`doss uninstall` marks the current device `unregistered`, pushes that state, and only
+then deletes the local vault. `doss devices unregister <id>` marks another existing
+device unregistered. This is bookkeeping, not security revocation; revoke GitHub,
+SSH, or token access too if a device is lost.
 
 ## Identity
 
