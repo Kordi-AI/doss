@@ -126,9 +126,12 @@ external requester. It combines the two gates without mixing their meanings:
   commit, and any rough-shared facts omitted because `rough:` was missing
 
 Denied topics, unlisted topics, `status: suggested` facts, missing rough values,
-`peers/`, and `notes/` are omitted. A host should generate a fresh view after
-changing `policy.yaml` or `local/access.yaml`, then give the external-facing
-agent only that view instead of the raw vault.
+`peers/`, and `notes/` are omitted. `doss view` validates the vault before
+export and refuses policy, access, device, or ledger problems other than missing
+`rough:` values; missing `rough:` values are omitted and recorded in
+`manifest.json`. A host should generate a fresh view after changing
+`policy.yaml` or `local/access.yaml`, then give the external-facing agent only
+that view instead of the raw vault.
 
 ## Identity
 
