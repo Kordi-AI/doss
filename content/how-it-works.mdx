@@ -175,9 +175,13 @@ The generated directory contains:
 
 Denied topics, unlisted topics, `status: suggested` facts, missing rough values,
 `peers/`, and `notes/` are omitted. The command refuses unsafe outputs such as
-the raw vault or an existing directory Doss did not create. Regenerate after
-changing `policy.yaml` or `local/access.yaml`; expired views can be removed with
-`doss view cleanup --dir PARENT`.
+the raw vault or an existing directory Doss did not create.
+
+Before export, `doss view` validates the vault and refuses policy, access,
+device, or ledger problems other than missing `rough:` values. Missing `rough:`
+values are the safe fallback: those facts are omitted and recorded in
+`manifest.json`. Regenerate after changing `policy.yaml` or `local/access.yaml`;
+expired views can be removed with `doss view cleanup --dir PARENT`.
 
 ## Local Access
 
