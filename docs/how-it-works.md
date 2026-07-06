@@ -212,6 +212,8 @@ The output contains:
 - `manifest.json` — requester id, generation and expiry times, source vault commit, source hashes, and facts omitted because a `rough` grant had no usable `rough:` value.
 - `README.md` — short instructions for the agent consuming the view.
 
+Before export, the command runs vault validation and refuses policy, access, device, or ledger problems other than missing `rough` values. Missing `rough` values are the only validation issue handled as a safe fallback: those facts are omitted and recorded in `manifest.json`.
+
 Denied topics, unlisted topics, `status: suggested` facts, facts missing required `rough` values, `peers/`, and `notes/` are omitted. The command refuses unsafe output paths such as the raw vault or an existing directory Doss did not create. Use a fresh temporary output per request, regenerate after changing `policy.yaml` or `local/access.yaml`, and remove expired views with `doss view cleanup --dir <parent>`.
 
 Honest bounds:

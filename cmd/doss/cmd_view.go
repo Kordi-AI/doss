@@ -83,6 +83,9 @@ func cmdView(args []string) error {
 	if err != nil {
 		return err
 	}
+	if err := validateViewSources(d); err != nil {
+		return err
+	}
 
 	policy, policyHash, err := loadViewPolicy(d)
 	if err != nil {
@@ -136,6 +139,30 @@ func cmdView(args []string) error {
 		fmt.Printf("warning: %d fact(s) omitted because rough values are missing\n", len(blocked))
 	}
 	return nil
+}
+
+func validateViewSources(dir string) error {
+	issues, err := check.Vault(dir)
+	if err != nil {
+		return err
+	}
+	var blockers []check.Issue
+	for _, is := range issues {
+		if is.Code == "E_ROUGH" {
+			continue
+		}
+		blockers = append(blockers, is)
+	}
+	if len(blockers) == 0 {
+		return nil
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "vault has %d problem(s) other than missing rough values; refusing to export requester view", len(blockers))
+	for _, is := range blockers {
+		fmt.Fprintf(&b, "\n%s", is)
+	}
+	fmt.Fprintf(&b, "\nrun `doss check` and fix these before generating a requester view")
+	return fmt.Errorf("%s", b.String())
 }
 
 func cmdViewCleanup(args []string) error {
