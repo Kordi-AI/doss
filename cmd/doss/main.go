@@ -20,6 +20,7 @@ usage: doss <command> [flags]
   doctor   full health: vault stats, sync, wiring, hooks, tidy hints; --fix repairs (alias: status)
   devices  list device registrations
   deactivate  choose a non-current device to revoke, then mark it inactive
+  view     generate a requester-scoped redacted context view
   tidy     dirt report: stale facts, unconfirmed guesses, notes backlog
   uninstall  delete the local vault and unwire agents (safe when a cloud copy exists)
   hook     harness hook endpoint (post-edit, stop) — wired by connect
@@ -51,6 +52,8 @@ func main() {
 		err = cmdDevices(os.Args[2:])
 	case "deactivate":
 		err = cmdDeactivate(os.Args[2:])
+	case "view":
+		err = cmdView(os.Args[2:])
 	case "uninstall":
 		err = cmdUninstall(os.Args[2:])
 	case "tidy":
