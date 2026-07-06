@@ -92,14 +92,23 @@ func deactivateDevice(dir, id string) error {
 		return err
 	}
 	found := false
+	var target vault.Device
 	for _, dev := range devices {
 		if dev.ID == id {
 			found = true
+			target = dev
 			break
 		}
 	}
 	if !found {
 		return fmt.Errorf("device %q is not registered", id)
+	}
+	switch target.Status {
+	case "active":
+	case "deactivated":
+		return fmt.Errorf("device %q is already deactivated", id)
+	default:
+		return fmt.Errorf("device %q is not active (status: %q); run `doss check`", id, target.Status)
 	}
 	if revoked, err := revokeDeviceDeployKey(dir, id); err != nil {
 		return err
