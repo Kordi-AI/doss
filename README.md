@@ -21,6 +21,7 @@ wiring, and policy-backed disclosure controls and logs.
 | Disclosure policy | `~/.doss/policy.yaml` | Maps groups of people to `full`, `rough`, or `no` disclosure for owner topics. Default: deny. |
 | Device registry | `~/.doss/devices/` | Synced records of devices attached to the vault, including GitHub deploy-key metadata when available. |
 | Local access policy | `~/.doss/local/access.yaml` | Gitignored, device-local rules for non-owner tasks on this machine's files. |
+| Requester view | `doss view --for <verified-id> --out <dir>` | Builds a short-lived, redacted context directory for an external requester. |
 | Audit ledger | `doss log` | Records who was told what; it does not authorize disclosure. |
 | Sync | `doss sync` | Validates, commits, pulls, and pushes the vault. |
 
@@ -54,6 +55,7 @@ After setup, agents operate on the vault as normal files:
 | Needs owner context | Read or search the vault with normal file tools. |
 | Edited vault files | Run `doss check --changed` and fix precise errors. |
 | Finished a batch/session | Run `doss sync`. |
+| Serving an external requester | Prefer a fresh `doss view --for <verified-id> --out <dir>` and answer from that directory. |
 | Disclosed owner info | Run `doss log --record --to <verified-id> --shared <topic> --level <rough|full>`. |
 
 For cloud sync and multi-device setup, see the
@@ -69,6 +71,7 @@ For cloud sync and multi-device setup, see the
 | `doss sync` | Commit, pull, and push; refuses to sync invalid vault state. |
 | `doss devices` | List synced device registrations. |
 | `doss deactivate` | Choose a non-current device, revoke its recorded GitHub deploy key, then mark it inactive. |
+| `doss view` | Generate a requester-scoped redacted view with `self/`, `access.json`, and `manifest.json`. |
 | `doss log` | Record or read the disclosure ledger; records include `--level rough|full`. |
 | `doss doctor` | Show vault health, sync, wiring, hooks, and tidy hints; `--fix` repairs wiring. |
 | `doss tidy` | List stale facts, unconfirmed guesses, and notes backlog for owner judgment. |
@@ -80,6 +83,11 @@ Doss is local-first. If an agent has raw access to the vault, disclosure policy 
 agent discipline plus an audit log, not a hard security boundary. Strong
 enforcement requires a serving layer that applies policy without giving the
 outward-facing agent raw vault access.
+
+`doss view` is the local building block for that serving layer: it exports only
+facts allowed by `policy.yaml` for one verified requester, plus a separate
+`access.json` projection from `local/access.yaml`. Missing `rough` values,
+suggested facts, peers, notes, and denied topics are omitted.
 
 For GitHub-backed vaults, Doss gives each registered device its own writable
 deploy key and removes that key on deactivate. This stops future Doss-managed

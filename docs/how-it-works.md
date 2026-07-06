@@ -83,6 +83,7 @@ can-see:
 | `doss doctor` | anyone | curiosity / something feels off | full health on one screen — vault stats, sync, agent wiring, hooks, tidy hints; `--fix` repairs wiring (`status` is an alias) |
 | `doss devices` | anyone | after setup / audit | lists synced device registrations |
 | `doss deactivate` | owner | removing a non-current device | prompts you to choose a device, revokes the recorded GitHub deploy key when present, then marks it inactive |
+| `doss view` | host / serving layer | before serving an external requester | generates a short-lived redacted directory for one verified requester, combining allowed owner facts from `policy.yaml` with local folder grants from `local/access.yaml` |
 | `doss tidy` | anyone, when nudged | when doctor says "tidy due" | prints the janitor's list; read-only |
 | `doss uninstall` | you | leaving a machine / starting over | deletes the local vault and unwires the agents; guided confirmation, git-style safety (see below) |
 | `doss hook` | **never by hand** — harnesses call it | automatic | the hook endpoint (`post-edit`, `stop`) |
@@ -200,6 +201,19 @@ The rules the agent follows:
 
 `doss log` is only the after-the-fact ledger. It does not decide whether a fact may leave, and a log entry is never permission. The sequence is: verify the requester, apply `policy.yaml`, answer only what is allowed, then log what was disclosed.
 
+## Requester Views
+
+`doss view --for <verified-id> --out <dir>` creates a short-lived context directory for a single external requester. It is meant for hosts or serving layers that want a stronger boundary than asking a raw-vault agent to follow policy by discipline.
+
+The output contains:
+
+- `self/` — only `self/**/*.md` facts the requester may receive. `full` grants write the fact body after frontmatter. `rough` grants write only the fact's owner-authored `rough:` value.
+- `access.json` — local folder grants from `local/access.yaml` for the requester's policy groups, using `read` / `full`.
+- `manifest.json` — requester id, generation and expiry times, source vault commit, source hashes, and facts omitted because a `rough` grant had no usable `rough:` value.
+- `README.md` — short instructions for the agent consuming the view.
+
+Denied topics, unlisted topics, `status: suggested` facts, facts missing required `rough` values, `peers/`, and `notes/` are omitted. The command refuses unsafe output paths such as the raw vault or an existing directory Doss did not create. Use a fresh temporary output per request, regenerate after changing `policy.yaml` or `local/access.yaml`, and remove expired views with `doss view cleanup --dir <parent>`.
+
 Honest bounds:
 
 - **This is discipline, not a wall, when the agent has raw vault access.** An agent that can `grep` the vault could bypass the rules. The hard guarantee only holds when the outward-facing agent has NO raw access and reaches owner info solely through a serving layer that applies the policy — a deployment choice (e.g. a hosted front desk), not something a local command can enforce.
@@ -216,6 +230,8 @@ Honest bounds:
 | `local/access.yaml` | no, gitignored | this device's folders | `no` / `read` / `full` | "What local files may this requester ask this machine to read, edit, or run?" |
 
 They do not grant each other. `policy.yaml` never grants permission to edit a local project, and `local/access.yaml` never grants permission to disclose owner facts from `self/`.
+
+`doss view` reads both files but keeps their meanings separate: allowed owner facts go under generated `self/`, while allowed local folder actions go into generated `access.json`. Updating either source file means the host should discard any old view and generate a fresh one before answering the requester.
 
 ## Sync and the cloud copy
 

@@ -43,6 +43,8 @@ Valid group member ids look like `platform:id`, for example `kordi:pedro`.
 
 Find the info the normal way (`ls` / `rg` / read). Then decide what may leave using `policy.yaml`.
 
+If the host gives you a generated Doss requester view, use that view as the only owner-memory source for the external request. Do not bypass it by reading the raw vault unless the owner explicitly switches you back into owner/maintenance mode. A view contains only allowed `self/` facts, an `access.json` local-access projection, and `manifest.json` freshness metadata.
+
 `policy.yaml` maps each group of verified people to disclosure levels for topics under `self/`: `no`, `rough`, or `full`.
 
 ```yaml
@@ -80,6 +82,8 @@ doss log --record --to <verified-id> --shared <topic> --level <rough|full> [--no
 ```
 
 The ledger records what happened. It never authorizes disclosure.
+
+When a generated requester view is available, denied topics, unlisted topics, missing `rough` values, suggested facts, `peers/`, and `notes/` should already be absent. Still apply this file's rules, respect `manifest.json` expiry, and disclose no more than the generated view contains.
 
 ## Local Device Access for Other People
 

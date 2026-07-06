@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Kordi-AI/doss/internal/vault"
 )
@@ -383,5 +385,199 @@ func TestLogRequiresAndRecordsDisclosureLevel(t *testing.T) {
 	}
 	if entries[0].Level != "rough" || entries[0].Shared != "profile/address" || entries[0].To != "kordi:pedro" {
 		t.Fatalf("ledger entry not recorded correctly: %+v", entries[0])
+	}
+}
+
+func TestViewProjectsRequesterScopedFactsAndAccess(t *testing.T) {
+	dir := initTestVault(t)
+	t.Setenv("DOSS_HOME", dir)
+
+	writeTestFile(t, filepath.Join(dir, "policy.yaml"), []byte(`groups:
+  friends: [kordi:pedro]
+  coworkers: [kordi:pedro]
+can-see:
+  friends:
+    profile/address: rough
+    profile/dietary: full
+    profile/missing: rough
+    work: no
+  coworkers:
+    profile/address: no
+`))
+	writeTestFile(t, filepath.Join(dir, "local", "access.yaml"), []byte(`grants:
+  friends:
+    /tmp/project: read
+    /tmp/write: full
+    /tmp/nope: no
+  strangers:
+    /tmp/private: full
+`))
+	writeTestFile(t, filepath.Join(dir, "self", "profile", "address.md"), []byte("---\nrough: \"Toronto\"\n---\n123 Private Street, Toronto\n"))
+	writeTestFile(t, filepath.Join(dir, "self", "profile", "dietary.md"), []byte("---\nsource: owner\n---\nSevere peanut allergy.\n"))
+	writeTestFile(t, filepath.Join(dir, "self", "profile", "missing.md"), []byte("Private missing rough body.\n"))
+	writeTestFile(t, filepath.Join(dir, "self", "profile", "suggested.md"), []byte("---\nstatus: suggested\nrough: \"draft\"\n---\nDraft fact.\n"))
+	writeTestFile(t, filepath.Join(dir, "self", "work", "company.md"), []byte("---\nrough: \"software\"\n---\nPrivate employer.\n"))
+	writeTestFile(t, filepath.Join(dir, "peers", "pedro.md"), []byte("Peer note.\n"))
+	writeTestFile(t, filepath.Join(dir, "notes", "scratch.md"), []byte("Scratch note.\n"))
+
+	out := filepath.Join(t.TempDir(), "pedro-view")
+	stdout, err := captureStdout(t, func() error {
+		return cmdView([]string{"--for", "kordi:pedro", "--out", out, "--ttl", "5m"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stdout, "view ready:") || !strings.Contains(stdout, "warning: 1 fact(s) omitted") {
+		t.Fatalf("view output should include ready path and missing rough warning, got:\n%s", stdout)
+	}
+
+	assertFileEquals(t, filepath.Join(out, "self", "profile", "address.md"), "Toronto\n")
+	assertFileContains(t, filepath.Join(out, "self", "profile", "dietary.md"), "Severe peanut allergy.")
+	assertMissing(t, filepath.Join(out, "self", "profile", "missing.md"))
+	assertMissing(t, filepath.Join(out, "self", "profile", "suggested.md"))
+	assertMissing(t, filepath.Join(out, "self", "work", "company.md"))
+	assertMissing(t, filepath.Join(out, "peers"))
+	assertMissing(t, filepath.Join(out, "notes"))
+
+	raw, err := os.ReadFile(filepath.Join(out, "access.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var access viewAccessOut
+	if err := json.Unmarshal(raw, &access); err != nil {
+		t.Fatal(err)
+	}
+	if access.Requester != "kordi:pedro" || len(access.Folders) != 2 {
+		t.Fatalf("unexpected access projection: %+v", access)
+	}
+	if access.Folders[0] != (viewAccessFolder{Path: "/tmp/project", Level: "read"}) {
+		t.Fatalf("unexpected first folder grant: %+v", access.Folders[0])
+	}
+	if access.Folders[1] != (viewAccessFolder{Path: "/tmp/write", Level: "full"}) {
+		t.Fatalf("unexpected second folder grant: %+v", access.Folders[1])
+	}
+
+	raw, err = os.ReadFile(filepath.Join(out, "manifest.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest viewManifest
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	if !manifest.DossView || manifest.Requester != "kordi:pedro" {
+		t.Fatalf("manifest should identify the Doss view and requester: %+v", manifest)
+	}
+	if manifest.PolicyHash == "" || manifest.LocalAccessHash == "" || manifest.SelfTreeHash == "" || manifest.SourceVaultCommit == "" {
+		t.Fatalf("manifest should include source hashes and commit: %+v", manifest)
+	}
+	if len(manifest.Blocked) != 1 || manifest.Blocked[0].Topic != "profile/missing" || manifest.Blocked[0].Reason != "missing rough" {
+		t.Fatalf("manifest should record missing rough block: %+v", manifest.Blocked)
+	}
+	if _, err := time.Parse(time.RFC3339, manifest.ExpiresAt); err != nil {
+		t.Fatalf("manifest should have RFC3339 expiry: %v", err)
+	}
+	assertFileContains(t, filepath.Join(out, "README.md"), "Do not read the raw vault")
+}
+
+func TestViewRejectsUnsafeOutputAndCleansExpiredViews(t *testing.T) {
+	dir := initTestVault(t)
+	t.Setenv("DOSS_HOME", dir)
+
+	if err := cmdView([]string{"--for", "Pedro", "--out", filepath.Join(t.TempDir(), "bad")}); err == nil {
+		t.Fatal("view should reject unverified requester ids")
+	}
+	if err := cmdView([]string{"--for", "kordi:pedro", "--out", filepath.Join(dir, "tmp-view")}); err == nil {
+		t.Fatal("view should reject output paths inside the raw vault")
+	}
+	existing := filepath.Join(t.TempDir(), "existing")
+	if err := os.MkdirAll(existing, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdView([]string{"--for", "kordi:pedro", "--out", existing}); err == nil {
+		t.Fatal("view should not overwrite directories it did not create")
+	}
+
+	parent := t.TempDir()
+	expired := filepath.Join(parent, "expired")
+	live := filepath.Join(parent, "live")
+	plain := filepath.Join(parent, "plain")
+	if err := os.MkdirAll(expired, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(live, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(plain, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestJSON(t, filepath.Join(expired, "manifest.json"), viewManifest{
+		DossView:  true,
+		ExpiresAt: time.Now().UTC().Add(-time.Minute).Format(time.RFC3339),
+	})
+	writeTestJSON(t, filepath.Join(live, "manifest.json"), viewManifest{
+		DossView:  true,
+		ExpiresAt: time.Now().UTC().Add(time.Minute).Format(time.RFC3339),
+	})
+	if err := cmdView([]string{"cleanup", "--dir", parent}); err != nil {
+		t.Fatal(err)
+	}
+	assertMissing(t, expired)
+	assertExists(t, live)
+	assertExists(t, plain)
+}
+
+func writeTestFile(t *testing.T, path string, b []byte) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writeTestJSON(t *testing.T, path string, v any) {
+	t.Helper()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, path, b)
+}
+
+func assertFileEquals(t *testing.T, path, want string) {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(raw) != want {
+		t.Fatalf("%s = %q, want %q", path, raw, want)
+	}
+}
+
+func assertFileContains(t *testing.T, path, want string) {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), want) {
+		t.Fatalf("%s should contain %q, got:\n%s", path, want, raw)
+	}
+}
+
+func assertExists(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("%s should exist: %v", path, err)
+	}
+}
+
+func assertMissing(t *testing.T, path string) {
+	t.Helper()
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("%s should be missing, stat err: %v", path, err)
 	}
 }
