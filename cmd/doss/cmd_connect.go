@@ -12,9 +12,21 @@ import (
 )
 
 const (
-	beginMark = "<!-- doss:begin -->"
-	endMark   = "<!-- doss:end -->"
+	beginMark             = "<!-- doss:begin -->"
+	endMark               = "<!-- doss:end -->"
+	claudePostEditCommand = "doss hook post-edit"
+	claudeStopCommand     = "doss hook stop"
 )
+
+type markerPair struct {
+	begin string
+	end   string
+}
+
+var managedMarkerPairs = []markerPair{
+	{beginMark, endMark},
+	{"<!-- dossier:begin -->", "<!-- dossier:end -->"},
+}
 
 // Every supported harness loads one global instruction file in every project.
 // connect maintains a small managed pointer section in each of them — that is
@@ -87,44 +99,89 @@ Long-term preferences about the owner live in a Doss vault at ` + "`" + vaultDir
 ` + endMark + "\n"
 }
 
-// upsertSection replaces an existing managed section or appends a new one.
+// upsertSection replaces existing managed sections or appends a new one. It
+// also migrates the old dossier markers and collapses accidental duplicates.
 func upsertSection(content, section string) (string, bool) {
-	begin := strings.Index(content, beginMark)
-	end := strings.Index(content, endMark)
-	if begin >= 0 && end > begin {
-		updated := content[:begin] + strings.TrimSuffix(section, "\n") + content[end+len(endMark):]
-		return updated, true
+	cleaned, insertAt, existed := stripManagedSections(content)
+	if existed {
+		return insertSectionAt(cleaned, section, insertAt), true
 	}
-	if content != "" && !strings.HasSuffix(content, "\n") {
-		content += "\n"
-	}
-	if content != "" {
-		content += "\n"
-	}
-	return content + section, false
+	return insertSectionAt(content, section, len(content)), false
 }
 
 func removeSection(content string) (string, bool) {
+	cleaned, _, removed := stripManagedSections(content)
+	return cleaned, removed
+}
+
+func stripManagedSections(content string) (string, int, bool) {
+	insertAt := -1
 	removed := false
-	// Also strip the legacy "dossier:" markers so a rename migrates cleanly.
-	for _, m := range [][2]string{
-		{beginMark, endMark},
-		{"<!-- dossier:begin -->", "<!-- dossier:end -->"},
-	} {
-		begin := strings.Index(content, m[0])
-		end := strings.Index(content, m[1])
-		if begin < 0 || end <= begin {
-			continue
+	for {
+		begin, end, ok := nextManagedSection(content)
+		if !ok {
+			break
 		}
-		after := strings.TrimPrefix(content[end+len(m[1]):], "\n")
+		if insertAt < 0 {
+			insertAt = begin
+		}
 		before := strings.TrimRight(content[:begin], "\n")
-		if before != "" {
-			before += "\n"
+		after := strings.TrimPrefix(content[end:], "\n")
+		if before != "" && after != "" {
+			content = before + "\n" + after
+		} else {
+			content = before + after
 		}
-		content = before + after
+		if insertAt > len(content) {
+			insertAt = len(content)
+		}
 		removed = true
 	}
-	return content, removed
+	return content, insertAt, removed
+}
+
+func nextManagedSection(content string) (int, int, bool) {
+	bestBegin := -1
+	bestEnd := -1
+	for _, m := range managedMarkerPairs {
+		begin := strings.Index(content, m.begin)
+		if begin < 0 {
+			continue
+		}
+		afterBegin := begin + len(m.begin)
+		relEnd := strings.Index(content[afterBegin:], m.end)
+		if relEnd < 0 {
+			continue
+		}
+		end := afterBegin + relEnd + len(m.end)
+		if bestBegin < 0 || begin < bestBegin {
+			bestBegin = begin
+			bestEnd = end
+		}
+	}
+	if bestBegin < 0 {
+		return 0, 0, false
+	}
+	return bestBegin, bestEnd, true
+}
+
+func insertSectionAt(content, section string, at int) string {
+	section = strings.TrimSuffix(section, "\n")
+	if at < 0 || at > len(content) {
+		at = len(content)
+	}
+	before := strings.TrimRight(content[:at], "\n")
+	after := strings.TrimPrefix(content[at:], "\n")
+	switch {
+	case before != "" && after != "":
+		return before + "\n\n" + section + "\n\n" + after
+	case before != "":
+		return before + "\n\n" + section + "\n"
+	case after != "":
+		return section + "\n\n" + after
+	default:
+		return section + "\n"
+	}
 }
 
 // wiringState reports whether one harness's global file carries a current
@@ -199,6 +256,9 @@ func cmdConnect(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	if *remove && *file != "" {
+		return fmt.Errorf("--file cannot be combined with --remove; saved custom targets are removed automatically")
+	}
 	if !*remove && !vault.Exists(vault.Dir()) {
 		return fmt.Errorf("no vault at %s — run `doss init` first", vault.Dir())
 	}
@@ -216,7 +276,7 @@ func cmdConnect(args []string) error {
 
 	customs := loadCustomTargets()
 	if *file != "" {
-		abs, err := filepath.Abs(*file)
+		abs, err := validateCustomTarget(*file, vault.Dir())
 		if err != nil {
 			return err
 		}
@@ -343,6 +403,31 @@ rerunning connect updates it in place, --remove deletes it.`)
 	return nil
 }
 
+func validateCustomTarget(p, vaultDir string) (string, error) {
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return "", err
+	}
+	if st, err := os.Stat(abs); err == nil && st.IsDir() {
+		return "", fmt.Errorf("--file must be an agent instruction file, got directory: %s", abs)
+	} else if err != nil && !os.IsNotExist(err) {
+		return "", err
+	}
+	vd, err := filepath.Abs(vaultDir)
+	if err == nil && sameOrInside(abs, vd) {
+		return "", fmt.Errorf("--file must point to an agent's always-loaded instruction file, not a file inside the vault")
+	}
+	return abs, nil
+}
+
+func sameOrInside(path, root string) bool {
+	rel, err := filepath.Rel(root, path)
+	if err != nil {
+		return false
+	}
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
+}
+
 // installClaudeHooks merges the doss write/stop hooks into
 // ~/.claude/settings.json without disturbing anything else in it.
 func installClaudeHooks(home string) (string, error) {
@@ -353,24 +438,25 @@ func installClaudeHooks(home string) (string, error) {
 			return "hooks skipped: settings.json unparseable, add `doss hook` manually", nil
 		}
 	}
-	if b, _ := json.Marshal(cfg); strings.Contains(string(b), "doss hook") {
-		return "hooks ok", nil
-	}
 	hooks, _ := cfg["hooks"].(map[string]any)
 	if hooks == nil {
 		hooks = map[string]any{}
 	}
-	post, _ := hooks["PostToolUse"].([]any)
-	post = append(post, map[string]any{
+	changed := false
+	if ensureClaudeHook(hooks, "PostToolUse", claudePostEditCommand, map[string]any{
 		"matcher": "Edit|Write|MultiEdit",
-		"hooks":   []any{map[string]any{"type": "command", "command": "doss hook post-edit"}},
-	})
-	hooks["PostToolUse"] = post
-	stop, _ := hooks["Stop"].([]any)
-	stop = append(stop, map[string]any{
-		"hooks": []any{map[string]any{"type": "command", "command": "doss hook stop"}},
-	})
-	hooks["Stop"] = stop
+		"hooks":   []any{map[string]any{"type": "command", "command": claudePostEditCommand}},
+	}) {
+		changed = true
+	}
+	if ensureClaudeHook(hooks, "Stop", claudeStopCommand, map[string]any{
+		"hooks": []any{map[string]any{"type": "command", "command": claudeStopCommand}},
+	}) {
+		changed = true
+	}
+	if !changed {
+		return "hooks ok", nil
+	}
 	cfg["hooks"] = hooks
 	out, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
@@ -382,16 +468,54 @@ func installClaudeHooks(home string) (string, error) {
 	if err := os.WriteFile(path, append(out, '\n'), 0o644); err != nil {
 		return "", err
 	}
-	return "hooks installed", nil
+	return "hooks installed/repaired", nil
+}
+
+func ensureClaudeHook(hooks map[string]any, key, command string, entry map[string]any) bool {
+	items, _ := hooks[key].([]any)
+	changed := false
+	hasCommand := false
+	var kept []any
+	for _, item := range items {
+		b, _ := json.Marshal(item)
+		s := string(b)
+		switch {
+		case strings.Contains(s, command):
+			hasCommand = true
+			kept = append(kept, item)
+		case isDossHookJSON(s):
+			changed = true
+		default:
+			kept = append(kept, item)
+		}
+	}
+	if !hasCommand {
+		kept = append(kept, entry)
+		changed = true
+	}
+	hooks[key] = kept
+	return changed
+}
+
+func hookListHasCommand(v any, command string) bool {
+	items, _ := v.([]any)
+	for _, item := range items {
+		b, _ := json.Marshal(item)
+		if strings.Contains(string(b), command) {
+			return true
+		}
+	}
+	return false
+}
+
+func isDossHookJSON(s string) bool {
+	return strings.Contains(s, "doss hook") || strings.Contains(s, "dossier hook")
 }
 
 func removeClaudeHooks(home string) (bool, error) {
 	path := filepath.Join(home, ".claude", "settings.json")
 	raw, err := os.ReadFile(path)
-	isDossHook := func(s string) bool {
-		return strings.Contains(s, "doss hook") || strings.Contains(s, "dossier hook")
-	}
-	if err != nil || !isDossHook(string(raw)) {
+	if err != nil || !isDossHookJSON(string(raw)) {
 		return false, nil
 	}
 	cfg := map[string]any{}
@@ -406,7 +530,7 @@ func removeClaudeHooks(home string) (bool, error) {
 		entries, _ := hooks[key].([]any)
 		var kept []any
 		for _, e := range entries {
-			if b, _ := json.Marshal(e); isDossHook(string(b)) {
+			if b, _ := json.Marshal(e); isDossHookJSON(string(b)) {
 				continue
 			}
 			kept = append(kept, e)
@@ -432,5 +556,14 @@ func removeClaudeHooks(home string) (bool, error) {
 // claudeHooksWired reports whether the doss hooks are present.
 func claudeHooksWired(home string) bool {
 	raw, err := os.ReadFile(filepath.Join(home, ".claude", "settings.json"))
-	return err == nil && strings.Contains(string(raw), "doss hook post-edit")
+	if err != nil {
+		return false
+	}
+	cfg := map[string]any{}
+	if json.Unmarshal(raw, &cfg) != nil {
+		return strings.Contains(string(raw), claudePostEditCommand) && strings.Contains(string(raw), claudeStopCommand)
+	}
+	hooks, _ := cfg["hooks"].(map[string]any)
+	return hookListHasCommand(hooks["PostToolUse"], claudePostEditCommand) &&
+		hookListHasCommand(hooks["Stop"], claudeStopCommand)
 }
