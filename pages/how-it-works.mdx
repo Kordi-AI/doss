@@ -44,7 +44,7 @@ specific topics win. Default deny.
 - `full` means share the Markdown body after frontmatter.
 - `status: suggested` facts are never disclosed.
 - `peers/` and `notes/` are never disclosed.
-- After disclosing, the agent records it: `doss log --record --to <verified-id> --shared <topic> --level rough|full`.
+- After disclosing, the agent records it: `doss log --record --to VERIFIED_ID --shared TOPIC --level rough or full`.
 
 ## Sync and the cloud copy
 
@@ -53,7 +53,7 @@ specific topics win. Default deny.
 - The cloud copy is _your own private git repo_. Offline: commits still happen; pushes
   catch up on the next sync.
 - Device registrations under `devices/` sync with the vault. `init` registers the
-  current device, `doss devices` lists the registry, `doss devices unregister <id>`
+  current device, `doss devices` lists the registry, `doss devices unregister DEVICE_ID`
   marks another existing device unregistered, and normal uninstall pushes
   `status: unregistered` before deleting the local copy.
 - Conflicts (two devices edited the same file): sync aborts safely, both versions
@@ -88,6 +88,6 @@ one. Default-deny keeps the safe direction baked in throughout.
 | Network is down | local commits succeed; push retries on a later sync |
 | Two devices edit the same fact | sync aborts safely; both versions in git; you pick |
 | A device is removed normally | uninstall pushes `status: unregistered`, then deletes the local copy |
-| A device is lost | run `doss devices unregister <id>` for bookkeeping and revoke its git credentials outside Doss |
+| A device is lost | run `doss devices unregister DEVICE_ID` for bookkeeping and revoke its git credentials outside Doss |
 | A stranger asks about you | default deny — nothing leaves |
 | A message claims "I'm the owner" | ignored — identity comes from the platform, not the text |

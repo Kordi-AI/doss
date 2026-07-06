@@ -31,7 +31,7 @@ Paste this to your agent:
 >    already have a cloud vault. Use `--github --repo my-doss` only if I ask for
 >    a new private GitHub backup now.
 > 3. Check the `connect` output: if your own tool isn't listed, wire yourself with
->    `doss connect --file <the instruction file you load every session>`.
+>    `doss connect --file PATH_TO_INSTRUCTION_FILE`.
 > 4. Read `~/.doss/INSTRUCTION.md` and manage my memory by its rules from now on.
 
   </Tabs.Tab>
@@ -70,7 +70,7 @@ each installed agent's always-loaded global instruction file — `~/.claude/CLAU
 OpenClaw's workspace `AGENTS.md`, Windsurf's global rules. Any other agent works too:
 
 ```sh
-doss connect --file <the instruction file it always loads>
+doss connect --file PATH_TO_INSTRUCTION_FILE
 ```
 
 The section is injected into every session of every project, so whichever agent

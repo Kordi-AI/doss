@@ -1,24 +1,24 @@
 # Commands
 
-`doss <command> [flags]` · vault location: `$DOSS_HOME`, default `~/.doss`
+`doss COMMAND [flags]` · vault location: `$DOSS_HOME`, default `~/.doss`
 
 | Command | What it does |
 | --- | --- |
-| `doss init` | Create a vault. Main paths: `doss init` for a new vault, `doss init --from owner/repo` for another device. Agent setup can pass `--git-name` / `--git-email`. Advanced: `--github --repo my-doss`, `--remote <git-url>`, `--dir <path>`, `--no-connect`. Auto-runs `connect`. |
-| `doss connect` | Wire the vault into every installed agent's global config. `--file <path>` for an unknown agent; `--remove` to undo. |
+| `doss init` | Create a vault. Main paths: `doss init` for a new vault, `doss init --from owner/repo` for another device. Agent setup can pass `--git-name` / `--git-email`. Advanced: `--github --repo my-doss`, `--remote GIT_URL`, `--dir PATH`, `--no-connect`. Auto-runs `connect`. |
+| `doss connect` | Wire the vault into every installed agent's global config. `--file PATH` for an unknown agent; `--remove` to undo. |
 | `doss check` | Validate memory files; bad writes bounce with precise, fixable errors. `--changed` checks only files touched since the last commit. |
 | `doss sync` | Commit + pull + push. Only validated state ever leaves; conflicts abort safely. |
 | `doss doctor` | Full health: vault stats, sync state, agent wiring, hooks, tidy hints. `--fix` repairs wiring. Alias: `status`. |
-| `doss devices` | List synced device registrations, marking the current device and active vs. unregistered status. `unregister <id>` marks an already-registered non-current device unregistered. |
+| `doss devices` | List synced device registrations, marking the current device and active vs. unregistered status. `unregister DEVICE_ID` marks an already-registered non-current device unregistered. |
 | `doss tidy` | What needs your judgment: stale facts, unconfirmed guesses, notes backlog. Read-only. |
-| `doss log` | `--record --to <verified-id> --shared <topic> --level rough|full` notes a disclosure; plain `doss log` reads "who knows what about me" across all devices. |
+| `doss log` | `--record --to VERIFIED_ID --shared TOPIC --level rough or full` notes a disclosure; plain `doss log` reads "who knows what about me" across all devices. |
 | `doss uninstall` | Delete the local vault and unwire agents (safe when a cloud copy exists; refuses otherwise unless `--force`). |
 | `doss hook` | Harness hook endpoint (`post-edit`, `stop`) — wired by `connect`, never run by hand. |
 
 ## Who runs what
 
 - **Agents, automatically** — `check` (via hooks after edits), `sync` (at session end).
-- **Agents, when acting for others** — `log --record --to <verified-id> --shared <topic> --level rough|full` after an allowed disclosure.
+- **Agents, when acting for others** — `log --record --to VERIFIED_ID --shared TOPIC --level rough or full` after an allowed disclosure.
 - **You** — `init`, `devices`, `doctor`, `tidy`, `uninstall`, and editing `policy.yaml` / `local/access.yaml`.
 
 ## Frontmatter fields
