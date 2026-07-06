@@ -304,6 +304,9 @@ func TestDeactivateAnotherRegisteredDevice(t *testing.T) {
 	if err := cmdDeactivate(nil); err == nil || !strings.Contains(err.Error(), "choose a device") {
 		t.Fatalf("deactivate without id should require an interactive terminal, got: %v", err)
 	}
+	if err := cmdDevices([]string{"deactivate", old}); err == nil || !strings.Contains(err.Error(), "usage: doss devices") {
+		t.Fatalf("devices should be read-only; use doss deactivate for mutation, got: %v", err)
+	}
 	if err := cmdDeactivate([]string{old}); err != nil {
 		t.Fatal(err)
 	}
@@ -316,24 +319,6 @@ func TestDeactivateAnotherRegisteredDevice(t *testing.T) {
 	}
 	if err := cmdDeactivate([]string{old}); err == nil || !strings.Contains(err.Error(), "already deactivated") {
 		t.Fatalf("deactivate should reject already deactivated devices, got: %v", err)
-	}
-
-	alias := "alias-device"
-	aliasFile := filepath.Join(dir, "devices", alias+".yaml")
-	if err := os.WriteFile(aliasFile, []byte("id: alias-device\nlabel: Alias Device\nstatus: active\nregistered_at: \"2026-07-05T12:00:00Z\"\ndeactivated_at: \"\"\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	runGit(t, dir, "add", "-A")
-	runGit(t, dir, "commit", "-m", "alias device")
-	if err := cmdDevices([]string{"deactivate", alias}); err != nil {
-		t.Fatal(err)
-	}
-	raw, err = os.ReadFile(aliasFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(raw), "status: deactivated") {
-		t.Fatalf("devices deactivate alias should work, got:\n%s", raw)
 	}
 }
 
@@ -395,6 +380,7 @@ func TestViewProjectsRequesterScopedFactsAndAccess(t *testing.T) {
 	writeTestFile(t, filepath.Join(dir, "policy.yaml"), []byte(`groups:
   friends: [kordi:pedro]
   coworkers: [kordi:pedro]
+  strangers: []
 can-see:
   friends:
     profile/address: rough
@@ -478,6 +464,42 @@ can-see:
 		t.Fatalf("manifest should have RFC3339 expiry: %v", err)
 	}
 	assertFileContains(t, filepath.Join(out, "README.md"), "Do not read the raw vault")
+}
+
+func TestViewRefusesInvalidPolicyOrAccessBeforeExport(t *testing.T) {
+	dir := initTestVault(t)
+	t.Setenv("DOSS_HOME", dir)
+
+	writeTestFile(t, filepath.Join(dir, "self", "profile", "address.md"), []byte("---\nrough: \"Toronto\"\n---\n123 Private Street, Toronto\n"))
+	writeTestFile(t, filepath.Join(dir, "policy.yaml"), []byte(`groups:
+  friends: [kordi:pedro]
+can-see:
+  friends:
+    profile/address: read
+`))
+	out := filepath.Join(t.TempDir(), "bad-policy")
+	err := cmdView([]string{"--for", "kordi:pedro", "--out", out})
+	if err == nil || !strings.Contains(err.Error(), "refusing to export requester view") || !strings.Contains(err.Error(), "E_POLICY") {
+		t.Fatalf("view should fail on invalid disclosure policy, got: %v", err)
+	}
+	assertMissing(t, out)
+
+	writeTestFile(t, filepath.Join(dir, "policy.yaml"), []byte(`groups:
+  friends: [kordi:pedro]
+can-see:
+  friends:
+    profile/address: full
+`))
+	writeTestFile(t, filepath.Join(dir, "local", "access.yaml"), []byte(`grants:
+  friends:
+    /tmp/project: rough
+`))
+	out = filepath.Join(t.TempDir(), "bad-access")
+	err = cmdView([]string{"--for", "kordi:pedro", "--out", out})
+	if err == nil || !strings.Contains(err.Error(), "refusing to export requester view") || !strings.Contains(err.Error(), "E_ACCESS") {
+		t.Fatalf("view should fail on invalid local access policy, got: %v", err)
+	}
+	assertMissing(t, out)
 }
 
 func TestViewRejectsUnsafeOutputAndCleansExpiredViews(t *testing.T) {

@@ -18,10 +18,7 @@ func cmdDevices(args []string) error {
 		return err
 	}
 	if fs.NArg() > 0 {
-		if fs.NArg() != 2 || fs.Arg(0) != "deactivate" {
-			return fmt.Errorf("usage: doss devices [deactivate <device-id>]")
-		}
-		return deactivateDevice(d, fs.Arg(1))
+		return fmt.Errorf("usage: doss devices")
 	}
 	return printDevices(d)
 }

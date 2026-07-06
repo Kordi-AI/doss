@@ -86,8 +86,10 @@ outward-facing agent raw vault access.
 
 `doss view` is the local building block for that serving layer: it exports only
 facts allowed by `policy.yaml` for one verified requester, plus a separate
-`access.json` projection from `local/access.yaml`. Missing `rough` values,
-suggested facts, peers, notes, and denied topics are omitted.
+`access.json` projection from `local/access.yaml`. It validates the vault before
+export and refuses policy, access, device, or ledger problems other than missing
+`rough` values. Missing `rough` values, suggested facts, peers, notes, and denied
+topics are omitted.
 
 For GitHub-backed vaults, Doss gives each registered device its own writable
 deploy key and removes that key on deactivate. This stops future Doss-managed
