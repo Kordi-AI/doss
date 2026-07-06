@@ -75,7 +75,7 @@ can-see:
 
 | Command | Who runs it | When | What it does |
 | --- | --- | --- | --- |
-| `doss init` | you (or your agent, once per device) | setup | in a terminal, a **guided** setup (new vs. attach-to-cloud, commit identity, optional GitHub backup with token fallback); agents pass flags instead — `--github`/`--repo` for a new cloud repo, `--from <owner/repo or url>` to attach a device, `--remote <url>` for any git host, `--git-name`/`--git-email` for the commit identity (init refuses to guess when git has no identity); auto-runs `connect`. Guided mode triggers only on a real terminal, so agent runs are never blocked on a prompt. |
+| `doss init` | you (or your agent, once per device) | setup | guided setup in a terminal; agents pass only the flags they need. Main paths are `doss init` for a new vault and `doss init --from <owner/repo or url>` for another device. It refuses to guess a missing commit identity, and auto-runs `connect`. |
 | `doss connect` | auto via init; rerun after installing a new agent tool | rarely | wires every installed agent (see Wiring below); `--remove` undoes |
 | `doss check` | agents in hook-less tools; humans after hand edits | after editing | validates files; `--changed` = only files touched since last commit |
 | `doss sync` | agents at wrap-up; humans anytime | after a batch | commit + pull + push; refuses if validation fails |
@@ -84,6 +84,14 @@ can-see:
 | `doss uninstall` | you | leaving a machine / starting over | deletes the local vault and unwires the agents; guided confirmation, git-style safety (see below) |
 | `doss hook` | **never by hand** — harnesses call it | automatic | the hook endpoint (`post-edit`, `stop`) |
 | `doss log` | agents (record) / owner (read) | on disclosure / audit | `--record --to <verified-id> --shared <topic> --level rough|full` notes a disclosure; plain `doss log` reads "who knows what about me" |
+
+Setup variants:
+
+- Main human path: `doss init`.
+- Another device: `doss init --from owner/repo`.
+- Agent or other non-interactive setup: `doss init --git-name "Owner Name" --git-email owner@example.com`.
+- Advanced cloud setup: `doss init --github --repo my-doss` or `doss init --remote <git-url>`.
+- Advanced local control: `doss init --dir <path>` or `doss init --no-connect`.
 
 ## The inspector and the courier
 

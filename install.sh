@@ -112,4 +112,4 @@ case ":$PATH:" in
   *) echo "  note: add $BIN_DIR to your PATH" ;;
 esac
 echo "next: doss init          (guided setup)"
-echo "      doss init --github  (with a private GitHub repo as the cloud copy)"
+echo "      doss init --from owner/repo  (attach another device)"

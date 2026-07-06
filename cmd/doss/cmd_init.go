@@ -28,7 +28,6 @@ func cmdInit(args []string) error {
 	noConnect := fs.Bool("no-connect", false, "skip wiring agent global configs (doss connect)")
 	gitName := fs.String("git-name", "", "author name for vault commits (confirm with the owner)")
 	gitEmail := fs.String("git-email", "", "author email for vault commits (confirm with the owner)")
-	interactive := fs.Bool("interactive", false, "force the guided setup even when stdin is not a terminal")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -57,7 +56,7 @@ func cmdInit(args []string) error {
 	// Humans get a guided setup: one question at a time, nothing assumed.
 	// Agents pass flags and never see it.
 	guided := mode == "new" && !wantGitHub && *remote == "" &&
-		(*interactive || stdinIsTTY())
+		stdinIsTTY()
 	if guided {
 		p := newPrompter()
 		fmt.Println("Doss setup — your preference vault, your disclosure rules.")
