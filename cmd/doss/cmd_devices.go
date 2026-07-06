@@ -49,6 +49,13 @@ func unregisterDevice(dir, id string) error {
 	if !found {
 		return fmt.Errorf("device %q is not registered", id)
 	}
+	if revoked, err := revokeDeviceDeployKey(dir, id); err != nil {
+		return err
+	} else if revoked {
+		fmt.Printf("✓ GitHub deploy key revoked for %s\n", id)
+	} else {
+		fmt.Printf("warning: no GitHub deploy key recorded for %s; only the synced device registry will be updated\n", id)
+	}
 	if _, err := vault.UnregisterDevice(dir, id); err != nil {
 		return err
 	}

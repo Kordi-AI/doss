@@ -99,6 +99,11 @@ func cmdUninstall(args []string) error {
 			return fmt.Errorf("device was marked unregistered locally, but upload failed; vault was not deleted: %w", err)
 		}
 		fmt.Printf("✓ device unregistered: %s\n", id)
+		if revoked, err := revokeDeviceDeployKey(d, id); err != nil {
+			return fmt.Errorf("device was marked unregistered, but deploy key revocation failed; vault was not deleted: %w", err)
+		} else if revoked {
+			fmt.Printf("✓ GitHub deploy key revoked: %s\n", id)
+		}
 	} else if hasRemote && !safe && *force {
 		fmt.Println("warning: skipping synced device unregistration because the vault is being force-deleted with unsynced work")
 	}

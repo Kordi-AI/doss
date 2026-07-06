@@ -81,7 +81,7 @@ can-see:
 | `doss check` | agents in hook-less tools; humans after hand edits | after editing | validates files; `--changed` = only files touched since last commit |
 | `doss sync` | agents at wrap-up; humans anytime | after a batch | commit + pull + push; refuses if validation fails |
 | `doss doctor` | anyone | curiosity / something feels off | full health on one screen — vault stats, sync, agent wiring, hooks, tidy hints; `--fix` repairs wiring (`status` is an alias) |
-| `doss devices` | anyone | after setup / audit | lists synced device registrations; `unregister <id>` marks an already-registered non-current device as unregistered |
+| `doss devices` | anyone | after setup / audit | lists synced device registrations; `unregister <id>` revokes the recorded GitHub deploy key when present, then marks an already-registered non-current device as unregistered |
 | `doss tidy` | anyone, when nudged | when doctor says "tidy due" | prints the janitor's list; read-only |
 | `doss uninstall` | you | leaving a machine / starting over | deletes the local vault and unwires the agents; guided confirmation, git-style safety (see below) |
 | `doss hook` | **never by hand** — harnesses call it | automatic | the hook endpoint (`post-edit`, `stop`) |
@@ -95,7 +95,7 @@ Setup variants:
 - Advanced cloud setup: `doss init --github --repo my-doss` or `doss init --remote <git-url>`.
 - Advanced local control: `doss init --dir <path>` or `doss init --no-connect`.
 
-`init` also registers the current machine under `devices/<device-id>.yaml`, includes that file in git, and prints the same summary as `doss devices`. `init --from` registers the new device after cloning and immediately uploads that registration to the cloud copy.
+`init` also registers the current machine under `devices/<device-id>.yaml`, includes that file in git, and prints the same summary as `doss devices`. For GitHub-backed vaults, each device gets its own local SSH key under `local/keys/`; Doss adds the public half as a writable deploy key on the vault repo and records the deploy-key id in `devices/`. `init --from` registers the new device after cloning and immediately uploads that registration to the cloud copy.
 
 ## The inspector and the courier
 
@@ -220,7 +220,8 @@ They do not grant each other. `policy.yaml` never grants permission to edit a lo
 
 - **Upload is not saving.** Content is safe the moment it's written to a local file. Push only replicates it.
 - The cloud copy is *your own private GitHub repo* (created by `init --github`), or any git remote via `--remote`. The tool repo and your vault repo are entirely separate.
-- Device registrations under `devices/` sync with the vault. Each device gets one YAML file with `status: active` or `status: unregistered`; old records stay so ledger files remain interpretable.
+- GitHub-backed vaults use per-device deploy keys for Doss-managed sync. `doss sync` refuses to run on a device whose synced registry status is `unregistered`, and it also refuses GitHub sync until this device has a recorded deploy key.
+- Device registrations under `devices/` sync with the vault. Each device gets one YAML file with `status: active` or `status: unregistered`; GitHub devices also record `github_repo`, `deploy_key_id`, and key metadata so Doss can revoke that device's cloud credential later. Old records stay so ledger files remain interpretable.
 - Offline: commits still happen locally; pushes catch up on the next sync. Worst case, the cloud copy lags — the local vault is always complete.
 - Conflicts (two devices edited the same file): sync aborts safely, both versions survive in git, and the message tells you what to do. No silent loss, ever.
 - Only validated state syncs, and the receiving end re-validates.
@@ -233,7 +234,9 @@ They do not grant each other. `policy.yaml` never grants permission to edit a lo
 - **No cloud copy**, or **commits not pushed since the last sync**, or **uncommitted edits** → it warns and stops. Pass `--force` to override, or run `doss sync` first.
 - In a terminal it asks you to type the vault's folder name to confirm; non-interactively it requires `--yes`.
 
-When the vault has a cloud copy and no unsynced work, uninstall first marks this device `unregistered`, commits and pushes that state, then deletes the local vault. If that upload fails, the vault is not deleted. `unregistered` is an audit/status record, not security revocation; for a lost device, revoke its GitHub/SSH/token access too.
+When the vault has a cloud copy and no unsynced work, uninstall first marks this device `unregistered`, commits and pushes that state, revokes the current device's recorded GitHub deploy key when present, then deletes the local vault. If either upload or deploy-key revocation fails, the vault is not deleted.
+
+`doss devices unregister <id>` has two layers. The soft layer marks the synced registry record `unregistered`, and honest Doss clients refuse future sync when they see that status. The hard GitHub layer deletes the recorded per-device deploy key, so GitHub rejects future pull/push through that Doss-managed credential. The boundary is still honest: Doss cannot remotely erase the already-cloned local plaintext snapshot, and it cannot revoke separate owner account credentials that may be present on that machine. For a lost device, also revoke GitHub sessions, PATs, personal SSH keys, or deploy keys outside Doss if they exist.
 
 Deleting the local vault never deletes the cloud copy. The `doss` binary stays installed — remove it with `rm` if you want it gone too.
 
@@ -258,8 +261,8 @@ It is read-only. You (or your agent) handle a small batch and move on. You don't
 | Agent never runs sync | data is safe in local files; cloud lags until any sync runs |
 | Network is down | local commits succeed; push retries on a later sync; nothing blocks |
 | The managed section gets deleted | that agent stops discovering the vault; `doss doctor` reports it; `connect` restores it |
-| A device is removed normally | `doss uninstall` pushes `devices/<id>.yaml` with `status: unregistered`, then deletes the local vault |
-| A device is lost or compromised | run `doss devices unregister <id>` for Doss bookkeeping, and revoke its GitHub/SSH/token access outside Doss |
+| A device is removed normally | `doss uninstall` pushes `devices/<id>.yaml` with `status: unregistered`, revokes its recorded GitHub deploy key, then deletes the local vault |
+| A device is lost or compromised | run `doss devices unregister <id>` to revoke its recorded GitHub deploy key and block Doss-managed sync; also revoke any separate owner GitHub sessions, PATs, or SSH keys outside Doss |
 | Two devices edit the same fact | sync aborts safely; both versions in git; you pick |
 | An outsider asks about the owner | the agent follows `policy.yaml` (group → topic → full/rough/no, default deny) and shares only what's granted; with a raw-access agent this is discipline, not a wall — the hard guarantee needs a serving layer with no raw vault access |
 

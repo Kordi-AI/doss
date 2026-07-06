@@ -179,6 +179,26 @@ func TestSyncUsesCurrentBranchWhenNoUpstream(t *testing.T) {
 	}
 }
 
+func TestSyncRefusesUnregisteredCurrentDevice(t *testing.T) {
+	dir := initTestVault(t)
+	t.Setenv("DOSS_HOME", dir)
+	dev, err := vault.RegisterDevice(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := vault.UnregisterDevice(dir, dev.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	err = cmdSync([]string{"--quiet"})
+	if err == nil {
+		t.Fatal("sync should refuse an unregistered current device")
+	}
+	if !strings.Contains(err.Error(), "is unregistered") {
+		t.Fatalf("sync should explain unregistered device, got: %v", err)
+	}
+}
+
 func TestUninstallPushesDeviceUnregistration(t *testing.T) {
 	home := t.TempDir()
 	dir := filepath.Join(t.TempDir(), "vault")

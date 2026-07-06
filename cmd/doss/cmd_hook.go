@@ -88,6 +88,17 @@ func hookStop() error {
 	if err != nil || !dirty {
 		return nil
 	}
+	if err := ensureCurrentDeviceCanSync(d); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
+	if _, err := vault.RegisterDevice(d); err != nil {
+		return nil
+	}
+	if err := ensureGitHubDeviceKey(d, ""); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
 	issues, err := check.Vault(d)
 	if err != nil {
 		return nil

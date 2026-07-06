@@ -30,11 +30,15 @@ const (
 // Device is one synced device registration record. One file per device keeps
 // multi-device syncs from fighting over a single registry file.
 type Device struct {
-	ID             string `yaml:"id"`
-	Label          string `yaml:"label"`
-	Status         string `yaml:"status"`
-	RegisteredAt   string `yaml:"registered_at"`
-	UnregisteredAt string `yaml:"unregistered_at"`
+	ID                   string `yaml:"id"`
+	Label                string `yaml:"label"`
+	Status               string `yaml:"status"`
+	RegisteredAt         string `yaml:"registered_at"`
+	UnregisteredAt       string `yaml:"unregistered_at"`
+	GitHubRepo           string `yaml:"github_repo,omitempty"`
+	DeployKeyID          int64  `yaml:"deploy_key_id,omitempty"`
+	DeployKeyTitle       string `yaml:"deploy_key_title,omitempty"`
+	DeployKeyFingerprint string `yaml:"deploy_key_fingerprint,omitempty"`
 }
 
 // Dir returns the vault directory: $DOSS_HOME or ~/.doss.
@@ -191,6 +195,25 @@ func UnregisterDevice(dir, id string) (Device, error) {
 	}
 	dev.Status = "unregistered"
 	dev.UnregisteredAt = time.Now().UTC().Format(time.RFC3339)
+	return dev, writeDeviceFile(dir, dev)
+}
+
+// DeviceRecord returns one synced device record by id.
+func DeviceRecord(dir, id string) (Device, error) {
+	return readDeviceFile(dir, id)
+}
+
+// SetDeviceDeployKey records the GitHub deploy key that gates this device's
+// cloud sync access.
+func SetDeviceDeployKey(dir, id, repo, title, fingerprint string, keyID int64) (Device, error) {
+	dev, err := readDeviceFile(dir, id)
+	if err != nil {
+		return Device{}, err
+	}
+	dev.GitHubRepo = repo
+	dev.DeployKeyID = keyID
+	dev.DeployKeyTitle = title
+	dev.DeployKeyFingerprint = fingerprint
 	return dev, writeDeviceFile(dir, dev)
 }
 

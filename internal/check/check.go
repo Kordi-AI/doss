@@ -40,8 +40,9 @@ func (i Issue) String() string {
 }
 
 var (
-	nameRe     = regexp.MustCompile(`^[a-z0-9._-]+$`)
-	identityRe = regexp.MustCompile(`^[a-z][a-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._@-]*$`)
+	nameRe       = regexp.MustCompile(`^[a-z0-9._-]+$`)
+	identityRe   = regexp.MustCompile(`^[a-z][a-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._@-]*$`)
+	githubRepoRe = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
 
 	rootAllowed = map[string]bool{
 		"self": true, "peers": true, "notes": true,
@@ -70,7 +71,7 @@ type policyRules map[string]map[string]string
 // Vault checks the whole vault.
 func Vault(dir string) ([]Issue, error) {
 	var issues []Issue
-	rules := roughPolicyRules(dir)
+	rules, _ := roughPolicyRules(dir)
 
 	// Root layout: no strays.
 	entries, err := os.ReadDir(dir)
@@ -127,7 +128,15 @@ func Vault(dir string) ([]Issue, error) {
 // Files checks a specific set of vault-relative paths (plus policy.yaml if listed).
 func Files(dir string, files []string) ([]Issue, error) {
 	var issues []Issue
-	rules := roughPolicyRules(dir)
+	rules, policyErr := roughPolicyRules(dir)
+	// A malformed policy.yaml yields no rough rules; surface its parse error even
+	// when policy.yaml itself isn't in the changed set, so a broken policy can't
+	// silently drop the rough requirement for a changed self fact.
+	policyReported := false
+	if policyErr != nil {
+		issues = append(issues, checkPolicy(dir)...)
+		policyReported = true
+	}
 	checkedSelf := map[string]bool{}
 	policyChanged := false
 	for _, f := range files {
@@ -135,7 +144,10 @@ func Files(dir string, files []string) ([]Issue, error) {
 		switch {
 		case f == "policy.yaml":
 			policyChanged = true
-			issues = append(issues, checkPolicy(dir)...)
+			if !policyReported {
+				issues = append(issues, checkPolicy(dir)...)
+				policyReported = true
+			}
 		case strings.HasPrefix(f, "self/") || strings.HasPrefix(f, "peers/") || strings.HasPrefix(f, "notes/"):
 			if _, err := os.Stat(filepath.Join(dir, f)); err == nil {
 				issues = append(issues, checkFile(dir, f, rules)...)
@@ -390,14 +402,19 @@ func checkPolicy(dir string) []Issue {
 	return issues
 }
 
-func roughPolicyRules(dir string) policyRules {
+// roughPolicyRules parses policy.yaml into the rough-disclosure rules used to
+// decide which self facts must carry a rough value. A missing policy.yaml
+// yields no rules and no error (its absence is reported elsewhere); a malformed
+// one returns the parse error so callers can surface it instead of silently
+// dropping every rough requirement.
+func roughPolicyRules(dir string) (policyRules, error) {
 	b, err := os.ReadFile(filepath.Join(dir, "policy.yaml"))
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	var p policyFile
-	if yaml.Unmarshal(b, &p) != nil {
-		return nil
+	if err := yaml.Unmarshal(b, &p); err != nil {
+		return nil, err
 	}
 	rules := policyRules{}
 	for group, raw := range p.CanSee {
@@ -416,7 +433,7 @@ func roughPolicyRules(dir string) policyRules {
 			rules[group][topic] = level
 		}
 	}
-	return rules
+	return rules, nil
 }
 
 func checkPolicyDrivenRough(dir string, rules policyRules, alreadyChecked map[string]bool) []Issue {
@@ -610,11 +627,15 @@ func checkDeviceFile(dir, rel string) []Issue {
 		return append(issues, Issue{File: rel, Code: "E_READ", Msg: err.Error()})
 	}
 	var dev struct {
-		ID             string `yaml:"id"`
-		Label          string `yaml:"label"`
-		Status         string `yaml:"status"`
-		RegisteredAt   string `yaml:"registered_at"`
-		UnregisteredAt string `yaml:"unregistered_at"`
+		ID                   string `yaml:"id"`
+		Label                string `yaml:"label"`
+		Status               string `yaml:"status"`
+		RegisteredAt         string `yaml:"registered_at"`
+		UnregisteredAt       string `yaml:"unregistered_at"`
+		GitHubRepo           string `yaml:"github_repo"`
+		DeployKeyID          int64  `yaml:"deploy_key_id"`
+		DeployKeyTitle       string `yaml:"deploy_key_title"`
+		DeployKeyFingerprint string `yaml:"deploy_key_fingerprint"`
 	}
 	if err := yaml.Unmarshal(b, &dev); err != nil {
 		return []Issue{{File: rel, Line: yamlLine(err), Code: "E_YAML", Msg: "invalid YAML: " + yamlMsg(err)}}
@@ -656,6 +677,25 @@ func checkDeviceFile(dir, rel string) []Issue {
 		issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
 			Msg:  fmt.Sprintf("invalid device status %q", dev.Status),
 			Hint: "status must be active or unregistered"})
+	}
+	if dev.GitHubRepo != "" && !githubRepoRe.MatchString(dev.GitHubRepo) {
+		issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
+			Msg:  fmt.Sprintf("invalid github_repo %q", dev.GitHubRepo),
+			Hint: "use owner/repo, e.g. you/my-doss"})
+	}
+	if dev.DeployKeyID < 0 {
+		issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
+			Msg: "deploy_key_id must be positive"})
+	}
+	if dev.DeployKeyID > 0 && dev.GitHubRepo == "" {
+		issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
+			Msg:  "deploy_key_id requires github_repo",
+			Hint: "deploy keys are repository-scoped"})
+	}
+	if dev.GitHubRepo != "" && dev.DeployKeyID == 0 {
+		issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
+			Msg:  "github_repo requires deploy_key_id",
+			Hint: "record the GitHub deploy key id for revocation"})
 	}
 	return issues
 }
