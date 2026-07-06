@@ -13,7 +13,8 @@ import { Callout } from 'nextra/components'
 | `doss check` | Validate vault files. `--changed` checks files touched since the last commit, including `local/access.yaml` when present. |
 | `doss sync` | Validate, commit, pull, and push. Invalid state does not leave the machine. |
 | `doss doctor` | Show vault health: stats, sync state, agent wiring, hooks, devices, and tidy hints. `--fix` repairs wiring. Alias: `status`. |
-| `doss devices` | List synced device registrations, marking current device and active vs. unregistered status. `unregister DEVICE_ID` revokes the recorded GitHub deploy key when present, then sets another non-current device to `unregistered`. |
+| `doss devices` | List synced device registrations, marking current device and active vs. deactivated status. |
+| `doss deactivate` | Choose a non-current device, revoke its recorded GitHub deploy key when present, then mark it inactive. Scripts may pass `doss deactivate DEVICE_ID`. |
 | `doss tidy` | Print stale facts, unconfirmed guesses, rough-shared facts missing rough values, and notes backlog. Read-only. |
 | `doss log` | Record or read the disclosure ledger. `--record --to VERIFIED_ID --shared TOPIC --level rough or full` notes a disclosure. |
 | `doss uninstall` | Unwire agents and delete the local vault. It refuses unsafe deletion unless forced. |
@@ -34,10 +35,10 @@ import { Callout } from 'nextra/components'
 | `doss init --no-connect` | Initialize without wiring agent instruction files. |
 
 <Callout type="warning">
-  `doss devices unregister DEVICE_ID` blocks future Doss-managed GitHub sync when
-  the device has recorded deploy-key metadata. It cannot erase an already cloned
-  local plaintext vault, and it cannot revoke separate owner account credentials
-  such as GitHub sessions, PATs, or personal SSH keys.
+  `doss deactivate` blocks future Doss-managed GitHub sync when the device has
+  recorded deploy-key metadata. It cannot erase an already cloned local plaintext
+  vault, and it cannot revoke separate owner account credentials such as GitHub
+  sessions, PATs, or personal SSH keys.
 </Callout>
 
 ## Who Runs What
@@ -46,7 +47,7 @@ import { Callout } from 'nextra/components'
   errors.
 - **Agents, at wrap-up**: `doss sync`.
 - **Agents, after allowed disclosure**: `doss log --record --to VERIFIED_ID --shared TOPIC --level rough or full`.
-- **Owners**: `init`, `devices`, `doctor`, `tidy`, `uninstall`, and policy edits.
+- **Owners**: `init`, `devices`, `deactivate`, `doctor`, `tidy`, `uninstall`, and policy edits.
 
 ## Frontmatter Fields
 

@@ -175,7 +175,7 @@ happen locally and pushes catch up later. Conflicts abort safely with both
 versions preserved.
 
 Device records live under `devices/` and sync with the vault. Each record is YAML
-with `status: active` or `status: unregistered`. GitHub-backed vaults also record
+with `status: active` or `status: deactivated`. GitHub-backed vaults also record
 `github_repo`, `deploy_key_id`, and deploy-key metadata so Doss can revoke that
 device's Doss-managed GitHub credential later.
 
@@ -186,10 +186,10 @@ uses that key for future sync. `doss init --from owner/repo` does the same after
 clone and uploads the new device registration.
 
 <Callout type="warning">
-  Device unregister has two layers. The soft layer writes `status:
-  unregistered`, and honest Doss clients refuse future sync from that device. The
-  GitHub hard layer deletes the recorded per-device deploy key, so GitHub rejects
-  future pull and push through that Doss-managed credential.
+  `doss deactivate` has two layers. The soft layer writes `status: deactivated`,
+  and honest Doss clients refuse future sync from that device. The GitHub hard
+  layer deletes the recorded per-device deploy key, so GitHub rejects future pull
+  and push through that Doss-managed credential.
 </Callout>
 
 This still cannot erase a local plaintext clone that already exists, and it
@@ -197,7 +197,7 @@ cannot revoke separate owner account credentials such as GitHub sessions, PATs,
 or personal SSH keys. For a lost device, revoke those outside Doss too.
 
 `doss uninstall` handles the current machine: when safe, it marks this device
-`unregistered`, pushes that state, revokes its recorded GitHub deploy key when
+`deactivated`, pushes that state, revokes its recorded GitHub deploy key when
 present, unwires agents, and deletes the local vault. It still does not delete
 the cloud copy.
 
@@ -235,6 +235,6 @@ tamper-proof log. Default deny still makes the safe failure mode "share nothing"
 | Network is down | local commits succeed; push catches up later |
 | Two devices edit the same fact | sync aborts safely; both versions remain in git |
 | Managed instruction section is deleted | that agent stops discovering the vault; `doss doctor` reports it; `connect` restores it |
-| Device is removed normally | `doss uninstall` pushes `status: unregistered`, revokes its recorded GitHub deploy key, then deletes the local vault |
-| Device is lost or compromised | run `doss devices unregister DEVICE_ID` to revoke its recorded GitHub deploy key and block Doss-managed sync; also revoke any separate GitHub sessions, PATs, or personal SSH keys outside Doss |
+| Device is removed normally | `doss uninstall` pushes `status: deactivated`, revokes its recorded GitHub deploy key, then deletes the local vault |
+| Device is lost or compromised | run `doss deactivate` to choose the device, revoke its recorded GitHub deploy key, and block Doss-managed sync; also revoke any separate GitHub sessions, PATs, or personal SSH keys outside Doss |
 | Outsider asks about the owner | agent applies `policy.yaml`; unknown identity or missing grant means nothing leaves |
