@@ -2,11 +2,20 @@
 package vault
 
 import (
+	"crypto/rand"
 	"embed"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/Kordi-AI/doss/internal/gitx"
 )
 
 //go:embed templates
@@ -17,6 +26,16 @@ const (
 	ContentInstructionFile    = "CONTENT.md"
 	DisclosureInstructionFile = "DISCLOSURE.md"
 )
+
+// Device is one synced device registration record. One file per device keeps
+// multi-device syncs from fighting over a single registry file.
+type Device struct {
+	ID             string `yaml:"id"`
+	Label          string `yaml:"label"`
+	Status         string `yaml:"status"`
+	RegisteredAt   string `yaml:"registered_at"`
+	UnregisteredAt string `yaml:"unregistered_at"`
+}
 
 // Dir returns the vault directory: $DOSS_HOME or ~/.doss.
 func Dir() string {
@@ -73,9 +92,12 @@ func EnsureInstruction(dir string) error {
 
 // Scaffold creates the vault layout. It never overwrites existing files.
 func Scaffold(dir string) error {
-	for _, sub := range []string{"self", "peers", "notes"} {
+	for _, sub := range []string{"self", "peers", "notes", "devices"} {
 		if err := os.MkdirAll(filepath.Join(dir, sub), 0o755); err != nil {
 			return err
+		}
+		if sub == "devices" {
+			continue
 		}
 		keep := filepath.Join(dir, sub, ".gitkeep")
 		if _, err := os.Stat(keep); os.IsNotExist(err) {
@@ -98,6 +120,149 @@ func Scaffold(dir string) error {
 		}
 	}
 	return EnsureLocal(dir)
+}
+
+// DeviceID returns a stable, machine-local id stored in this vault's local git
+// config. The id itself is safe to sync once written into devices/<id>.yaml.
+func DeviceID(dir string) string {
+	if out, err := gitx.Run(dir, "config", "--local", "--get", "doss.device"); err == nil {
+		if id := strings.TrimSpace(out); id != "" {
+			return id
+		}
+	}
+	host, _ := os.Hostname()
+	host = strings.Trim(deviceSanitize.ReplaceAllString(strings.ToLower(host), "-"), "-")
+	host, _, _ = strings.Cut(host, ".")
+	if len(host) > 16 {
+		host = host[:16]
+	}
+	if host == "" {
+		host = "device"
+	}
+	id := fmt.Sprintf("%s-%s", host, randHex(2))
+	_, _ = gitx.Run(dir, "config", "--local", "doss.device", id)
+	return id
+}
+
+// RegisterDevice makes the current device active in the synced registry.
+func RegisterDevice(dir string) (Device, error) {
+	id := DeviceID(dir)
+	dev, err := readDeviceFile(dir, id)
+	if err != nil && !os.IsNotExist(err) {
+		return Device{}, err
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	if os.IsNotExist(err) {
+		dev = Device{
+			ID:           id,
+			Label:        defaultDeviceLabel(),
+			Status:       "active",
+			RegisteredAt: now,
+		}
+	} else {
+		if dev.ID == "" {
+			dev.ID = id
+		}
+		if dev.Label == "" {
+			dev.Label = defaultDeviceLabel()
+		}
+		if dev.RegisteredAt == "" {
+			dev.RegisteredAt = now
+		}
+		dev.Status = "active"
+		dev.UnregisteredAt = ""
+	}
+	return dev, writeDeviceFile(dir, dev)
+}
+
+// UnregisterDevice marks one device as no longer active, preserving its record
+// for audit and ledger interpretation.
+func UnregisterDevice(dir, id string) (Device, error) {
+	dev, err := readDeviceFile(dir, id)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return Device{}, err
+		}
+		dev = Device{
+			ID:           id,
+			Label:        defaultDeviceLabel(),
+			RegisteredAt: time.Now().UTC().Format(time.RFC3339),
+		}
+	}
+	dev.Status = "unregistered"
+	dev.UnregisteredAt = time.Now().UTC().Format(time.RFC3339)
+	return dev, writeDeviceFile(dir, dev)
+}
+
+// Devices returns every synced device record sorted by id.
+func Devices(dir string) ([]Device, error) {
+	root := filepath.Join(dir, "devices")
+	items, err := os.ReadDir(root)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var out []Device
+	for _, it := range items {
+		if it.IsDir() || !strings.HasSuffix(it.Name(), ".yaml") {
+			continue
+		}
+		id := strings.TrimSuffix(it.Name(), ".yaml")
+		dev, err := readDeviceFile(dir, id)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, dev)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out, nil
+}
+
+func DeviceFile(id string) string {
+	return filepath.Join("devices", id+".yaml")
+}
+
+func readDeviceFile(dir, id string) (Device, error) {
+	b, err := os.ReadFile(filepath.Join(dir, DeviceFile(id)))
+	if err != nil {
+		return Device{}, err
+	}
+	var dev Device
+	if err := yaml.Unmarshal(b, &dev); err != nil {
+		return Device{}, err
+	}
+	return dev, nil
+}
+
+func writeDeviceFile(dir string, dev Device) error {
+	if err := os.MkdirAll(filepath.Join(dir, "devices"), 0o755); err != nil {
+		return err
+	}
+	out, err := yaml.Marshal(dev)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, DeviceFile(dev.ID)), out, 0o644)
+}
+
+var deviceSanitize = regexp.MustCompile(`[^a-z0-9-]+`)
+
+func defaultDeviceLabel() string {
+	host, err := os.Hostname()
+	if err != nil || strings.TrimSpace(host) == "" {
+		return "device"
+	}
+	return strings.TrimSpace(host)
+}
+
+func randHex(n int) string {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return "0000"
+	}
+	return fmt.Sprintf("%x", b)
 }
 
 func seedTemplateFile(dir, dst, src string) error {

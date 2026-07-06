@@ -45,7 +45,7 @@ var (
 
 	rootAllowed = map[string]bool{
 		"self": true, "peers": true, "notes": true,
-		"policy.yaml": true, "INSTRUCTION.md": true, "CONTENT.md": true, "DISCLOSURE.md": true, "README.md": true,
+		"devices": true, "policy.yaml": true, "INSTRUCTION.md": true, "CONTENT.md": true, "DISCLOSURE.md": true, "README.md": true,
 		"ledger": true, "ledger.log": true, "local": true, ".git": true, ".gitignore": true, ".index": true,
 	}
 	allowedKeys = map[string]bool{
@@ -111,6 +111,7 @@ func Vault(dir string) ([]Issue, error) {
 	issues = append(issues, checkPolicy(dir)...)
 	issues = append(issues, checkAccess(dir)...)
 	issues = append(issues, checkLedger(dir)...)
+	issues = append(issues, checkDevices(dir)...)
 	return issues, nil
 }
 
@@ -131,6 +132,10 @@ func Files(dir string, files []string) ([]Issue, error) {
 		case strings.HasPrefix(f, "ledger/") || f == "ledger.log":
 			if _, err := os.Stat(filepath.Join(dir, f)); err == nil {
 				issues = append(issues, checkLedgerFile(dir, f)...)
+			}
+		case strings.HasPrefix(f, "devices/"):
+			if _, err := os.Stat(filepath.Join(dir, f)); err == nil {
+				issues = append(issues, checkDeviceFile(dir, f)...)
 			}
 		case strings.HasPrefix(f, "local/"),
 			f == "INSTRUCTION.md", f == "CONTENT.md", f == "DISCLOSURE.md", f == "README.md",
@@ -442,6 +447,83 @@ func checkLedgerFile(dir, rel string) []Issue {
 				Msg:  fmt.Sprintf("ledger shared has invalid topic %q", e.Shared),
 				Hint: "use a relative path under self/ without the self/ prefix, e.g. profile/address"})
 		}
+	}
+	return issues
+}
+
+func checkDevices(dir string) []Issue {
+	var issues []Issue
+	root := filepath.Join(dir, "devices")
+	_ = filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
+		if err != nil || e.IsDir() {
+			return nil
+		}
+		rel, _ := filepath.Rel(dir, p)
+		issues = append(issues, checkDeviceFile(dir, filepath.ToSlash(rel))...)
+		return nil
+	})
+	return issues
+}
+
+func checkDeviceFile(dir, rel string) []Issue {
+	var issues []Issue
+	base := filepath.Base(rel)
+	if !strings.HasSuffix(base, ".yaml") || !nameRe.MatchString(strings.TrimSuffix(base, ".yaml")) {
+		issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
+			Msg:  "device files must be named <device-id>.yaml",
+			Hint: "use `doss init` or `doss sync` to register this device"})
+	}
+	b, err := os.ReadFile(filepath.Join(dir, rel))
+	if err != nil {
+		return append(issues, Issue{File: rel, Code: "E_READ", Msg: err.Error()})
+	}
+	var dev struct {
+		ID             string `yaml:"id"`
+		Label          string `yaml:"label"`
+		Status         string `yaml:"status"`
+		RegisteredAt   string `yaml:"registered_at"`
+		UnregisteredAt string `yaml:"unregistered_at"`
+	}
+	if err := yaml.Unmarshal(b, &dev); err != nil {
+		return []Issue{{File: rel, Line: yamlLine(err), Code: "E_YAML", Msg: "invalid YAML: " + yamlMsg(err)}}
+	}
+	wantID := strings.TrimSuffix(base, ".yaml")
+	switch {
+	case dev.ID == "":
+		issues = append(issues, Issue{File: rel, Code: "E_DEVICE", Msg: "device entry missing id"})
+	case dev.ID != wantID:
+		issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
+			Msg:  fmt.Sprintf("device id %q does not match filename %q", dev.ID, wantID),
+			Hint: "the id field and filename must match"})
+	case !nameRe.MatchString(dev.ID):
+		issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
+			Msg:  fmt.Sprintf("invalid device id %q", dev.ID),
+			Hint: "device ids must be lowercase [a-z0-9._-]"})
+	}
+	if strings.TrimSpace(dev.Label) == "" {
+		issues = append(issues, Issue{File: rel, Code: "E_DEVICE", Msg: "device entry missing label"})
+	}
+	if dev.RegisteredAt == "" {
+		issues = append(issues, Issue{File: rel, Code: "E_DEVICE", Msg: "device entry missing registered_at"})
+	} else if _, err := time.Parse(time.RFC3339, dev.RegisteredAt); err != nil {
+		issues = append(issues, Issue{File: rel, Code: "E_DEVICE", Msg: "registered_at must be RFC3339"})
+	}
+	switch dev.Status {
+	case "active":
+		if strings.TrimSpace(dev.UnregisteredAt) != "" {
+			issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
+				Msg: "active devices must not set unregistered_at"})
+		}
+	case "unregistered":
+		if dev.UnregisteredAt == "" {
+			issues = append(issues, Issue{File: rel, Code: "E_DEVICE", Msg: "unregistered device missing unregistered_at"})
+		} else if _, err := time.Parse(time.RFC3339, dev.UnregisteredAt); err != nil {
+			issues = append(issues, Issue{File: rel, Code: "E_DEVICE", Msg: "unregistered_at must be RFC3339"})
+		}
+	default:
+		issues = append(issues, Issue{File: rel, Code: "E_DEVICE",
+			Msg:  fmt.Sprintf("invalid device status %q", dev.Status),
+			Hint: "status must be active or unregistered"})
 	}
 	return issues
 }

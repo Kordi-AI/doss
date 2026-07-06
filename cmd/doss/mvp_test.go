@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -30,6 +32,52 @@ func initTestVault(t *testing.T) string {
 	runGit(t, dir, "add", "-A")
 	runGit(t, dir, "commit", "-m", "init")
 	return dir
+}
+
+func captureStdout(t *testing.T, fn func() error) (string, error) {
+	t.Helper()
+	old := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = w
+	err = fn()
+	_ = w.Close()
+	os.Stdout = old
+	var buf bytes.Buffer
+	if _, copyErr := io.Copy(&buf, r); copyErr != nil {
+		t.Fatal(copyErr)
+	}
+	return buf.String(), err
+}
+
+func TestInitRegistersDeviceAndPrintsDevices(t *testing.T) {
+	home := t.TempDir()
+	dir := filepath.Join(t.TempDir(), "vault")
+	t.Setenv("HOME", home)
+	t.Setenv("DOSS_HOME", dir)
+
+	out, err := captureStdout(t, func() error {
+		return cmdInit([]string{"--no-connect", "--git-name", "Test Owner", "--git-email", "owner@example.com"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "devices: 1 active / 1 total") {
+		t.Fatalf("init should print device registry summary, got:\n%s", out)
+	}
+	if !strings.Contains(out, "* ") {
+		t.Fatalf("init should mark the current device, got:\n%s", out)
+	}
+	listed := exec.Command("git", "-C", dir, "ls-files", "devices/*.yaml")
+	raw, err := listed.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git ls-files devices failed: %v\n%s", err, raw)
+	}
+	if strings.TrimSpace(string(raw)) == "" {
+		t.Fatalf("device registration should be git-tracked, got no devices/*.yaml")
+	}
 }
 
 func TestConnectRequiresExistingVault(t *testing.T) {
@@ -118,10 +166,76 @@ func TestSyncUsesCurrentBranchWhenNoUpstream(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("sync did not push current branch trunk:\n%s", out)
 	}
+	cmd = exec.Command("git", "--git-dir", remote, "ls-tree", "-r", "--name-only", "refs/heads/trunk")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("reading remote tree failed:\n%s", out)
+	} else if !strings.Contains(string(out), "devices/") {
+		t.Fatalf("sync should register and push the current device, remote tree:\n%s", out)
+	}
 
 	runGit(t, dir, "commit", "--allow-empty", "-m", "ahead")
 	if got := unpushedCount(dir); got != 1 {
 		t.Fatalf("unpushedCount = %d, want 1 for current upstream branch", got)
+	}
+}
+
+func TestUninstallPushesDeviceUnregistration(t *testing.T) {
+	home := t.TempDir()
+	dir := filepath.Join(t.TempDir(), "vault")
+	remote := filepath.Join(t.TempDir(), "remote.git")
+	runGit(t, t.TempDir(), "init", "--bare", remote)
+	t.Setenv("HOME", home)
+	t.Setenv("DOSS_HOME", dir)
+
+	if err := cmdInit([]string{"--no-connect", "--remote", remote, "--git-name", "Test Owner", "--git-email", "owner@example.com"}); err != nil {
+		t.Fatal(err)
+	}
+	id := vault.DeviceID(dir)
+	if err := cmdUninstall([]string{"--yes", "--keep-agents"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatalf("vault should be deleted, stat err: %v", err)
+	}
+	cmd := exec.Command("git", "--git-dir", remote, "show", "refs/heads/main:devices/"+id+".yaml")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("remote device registration missing:\n%s", out)
+	}
+	if !strings.Contains(string(out), "status: unregistered") {
+		t.Fatalf("uninstall should push unregistered status, got:\n%s", out)
+	}
+}
+
+func TestDevicesUnregistersAnotherRegisteredDevice(t *testing.T) {
+	dir := initTestVault(t)
+	t.Setenv("DOSS_HOME", dir)
+	if _, err := vault.RegisterDevice(dir); err != nil {
+		t.Fatal(err)
+	}
+	old := "old-device"
+	oldFile := filepath.Join(dir, "devices", old+".yaml")
+	if err := os.WriteFile(oldFile, []byte("id: old-device\nlabel: Old Device\nstatus: active\nregistered_at: \"2026-07-05T12:00:00Z\"\nunregistered_at: \"\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, dir, "add", "-A")
+	runGit(t, dir, "commit", "-m", "devices")
+
+	if err := cmdDevices([]string{"unregister", vault.DeviceID(dir)}); err == nil {
+		t.Fatal("devices unregister should reject the current device")
+	}
+	if err := cmdDevices([]string{"unregister", "missing-device"}); err == nil {
+		t.Fatal("devices unregister should reject unknown devices")
+	}
+	if err := cmdDevices([]string{"unregister", old}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(oldFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), "status: unregistered") {
+		t.Fatalf("device should be marked unregistered, got:\n%s", raw)
 	}
 }
 

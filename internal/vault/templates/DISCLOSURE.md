@@ -68,8 +68,8 @@ Policy rules:
 - Folder rules inherit to facts below them, and a more specific topic wins.
 - Not listed -> `no`. Default is deny.
 - A person in several groups gets the highest granted level, ordered `no < rough < full`.
-- `status: suggested` facts never leave.
-- `peers/` and `notes/` never leave.
+- `status: suggested` facts are never disclosed.
+- `peers/` and `notes/` are never disclosed.
 - Do not work around `policy.yaml`.
 
 After disclosing anything about the owner, record it:

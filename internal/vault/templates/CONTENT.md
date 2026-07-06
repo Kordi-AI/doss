@@ -30,7 +30,7 @@ Home address: 123 King St W, Toronto.
 - Everything after the closing `---` is the full private fact body. There is no `full:` field.
 - There is no `no:` field inside a fact. `no` is a disclosure-policy result.
 - Keep each body focused on one topic. If a file starts collecting unrelated facts, split it by topic before syncing.
-- `peers/**/*.md` and `notes/**/*.md` are also Markdown. They may use the same frontmatter shape when helpful, but `rough` is required only under `self/`; `peers/` and `notes/` never leave this machine.
+- `peers/**/*.md` and `notes/**/*.md` are also Markdown. They may use the same frontmatter shape when helpful, but `rough` is required only under `self/`; `peers/` and `notes/` are never disclosed.
 
 ## Structure Examples
 

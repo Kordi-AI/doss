@@ -4,8 +4,9 @@ Private memory vault managed with [Doss](https://github.com/Kordi-AI/doss).
 
 - `self/` — Markdown facts about me (path = topic)
 - `peers/` — Markdown notes others shared with me
-- `notes/` — Markdown scratch; never leaves this machine
+- `notes/` — Markdown scratch; never disclosed
 - `policy.yaml` — disclosure rules (default: nothing leaves)
+- `devices/` — synced device registry (`active` / `unregistered`)
 - `INSTRUCTION.md` — entry rules agents read before using this vault
 - `CONTENT.md` — content maintenance rules
 - `DISCLOSURE.md` — outbound disclosure and local access rules

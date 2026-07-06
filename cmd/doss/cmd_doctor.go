@@ -80,6 +80,7 @@ func cmdDoctor(args []string) error {
 	fmt.Printf("facts:   %d in self/ · %d in peers/ · %d notes\n", counts["self"], counts["peers"], counts["notes"])
 	fmt.Printf("check:   %d problem(s)\n", len(issues))
 	fmt.Printf("sync:    %s · last commit %s%s\n", remote, last, dirtyNote)
+	printDeviceHealth(vd, &problems)
 
 	printWiring(&problems, fix)
 
@@ -96,6 +97,30 @@ func cmdDoctor(args []string) error {
 	}
 
 	return finish(problems)
+}
+
+func printDeviceHealth(dir string, problems *[]string) {
+	current := vault.DeviceID(dir)
+	devices, err := vault.Devices(dir)
+	if err != nil {
+		fmt.Printf("devices: could not read registry: %v\n", err)
+		*problems = append(*problems, "device registry unreadable — run `doss check`")
+		return
+	}
+	active := 0
+	currentStatus := "missing"
+	for _, dev := range devices {
+		if dev.Status == "active" {
+			active++
+		}
+		if dev.ID == current {
+			currentStatus = dev.Status
+		}
+	}
+	fmt.Printf("devices: %d active / %d total · current %s (%s)\n", active, len(devices), current, currentStatus)
+	if currentStatus != "active" {
+		*problems = append(*problems, "current device is not active in devices/ — run `doss sync`")
+	}
 }
 
 func printWiring(problems *[]string, fix *bool) {

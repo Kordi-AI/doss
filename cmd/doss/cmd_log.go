@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -13,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Kordi-AI/doss/internal/gitx"
 	"github.com/Kordi-AI/doss/internal/vault"
 )
 
@@ -99,7 +97,7 @@ func writeLedger(d, to, shared, level, note string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(filepath.Join(dir, deviceID(d)+".log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(filepath.Join(dir, vault.DeviceID(d)+".log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}
@@ -161,7 +159,6 @@ func readLedger(d string) (entries []ledgerEntry, devices []string, err error) {
 	return entries, devices, nil
 }
 
-var deviceSanitize = regexp.MustCompile(`[^a-z0-9-]+`)
 var requesterIDRe = regexp.MustCompile(`^[a-z][a-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._@-]*$`)
 var topicPartRe = regexp.MustCompile(`^[a-z0-9._-]+$`)
 
@@ -179,35 +176,4 @@ func validSharedTopic(topic string) bool {
 		}
 	}
 	return true
-}
-
-// deviceID is a stable, machine-local id stored in the vault's local git
-// config (never syncs). Hostname makes it recognizable; a random suffix
-// guarantees uniqueness across same-named hosts.
-func deviceID(d string) string {
-	if out, err := gitx.Run(d, "config", "--local", "--get", "doss.device"); err == nil {
-		if id := strings.TrimSpace(out); id != "" {
-			return id
-		}
-	}
-	host, _ := os.Hostname()
-	host = strings.Trim(deviceSanitize.ReplaceAllString(strings.ToLower(host), "-"), "-")
-	host, _, _ = strings.Cut(host, ".")
-	if len(host) > 16 {
-		host = host[:16]
-	}
-	if host == "" {
-		host = "device"
-	}
-	id := fmt.Sprintf("%s-%s", host, randHex(2))
-	_, _ = gitx.Run(d, "config", "--local", "doss.device", id)
-	return id
-}
-
-func randHex(n int) string {
-	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		return "0000"
-	}
-	return fmt.Sprintf("%x", b)
 }

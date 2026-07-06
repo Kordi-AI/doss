@@ -90,6 +90,18 @@ func cmdUninstall(args []string) error {
 	}
 
 	// Do it: unwire first (needs the vault path), then remove the directory.
+	if hasRemote && safe {
+		id := vault.DeviceID(d)
+		if _, err := vault.UnregisterDevice(d, id); err != nil {
+			return err
+		}
+		if err := syncGit(d, "doss: unregister device "+id, true); err != nil {
+			return fmt.Errorf("device was marked unregistered locally, but upload failed; vault was not deleted: %w", err)
+		}
+		fmt.Printf("✓ device unregistered: %s\n", id)
+	} else if hasRemote && !safe && *force {
+		fmt.Println("warning: skipping synced device unregistration because the vault is being force-deleted with unsynced work")
+	}
 	if !*keepAgents {
 		if err := cmdConnect([]string{"--remove"}); err != nil {
 			fmt.Fprintln(os.Stderr, "warning: could not fully unwire agents:", err)

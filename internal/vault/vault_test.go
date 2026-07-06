@@ -2,6 +2,7 @@ package vault
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -23,7 +24,7 @@ func TestScaffoldAndExists(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, f := range []string{
-		"self", "peers", "notes",
+		"self", "peers", "notes", "devices",
 		"policy.yaml", "INSTRUCTION.md", "CONTENT.md", "DISCLOSURE.md", "README.md", ".gitignore",
 		filepath.Join("local", "access.yaml"),
 	} {
@@ -108,5 +109,39 @@ func TestInstructionTemplatesExplainFactShapeAndDisclosure(t *testing.T) {
 		if !strings.Contains(disclosure, want) {
 			t.Fatalf("DISCLOSURE.md should contain %q", want)
 		}
+	}
+}
+
+func TestRegisterAndUnregisterDevice(t *testing.T) {
+	dir := t.TempDir()
+	cmd := exec.Command("git", "-C", dir, "init", "-b", "main")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init failed: %v\n%s", err, out)
+	}
+
+	dev, err := RegisterDevice(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dev.ID == "" || dev.Status != "active" || dev.RegisteredAt == "" {
+		t.Fatalf("bad registered device: %+v", dev)
+	}
+	if _, err := os.Stat(filepath.Join(dir, DeviceFile(dev.ID))); err != nil {
+		t.Fatalf("registered device file missing: %v", err)
+	}
+	devices, err := Devices(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(devices) != 1 || devices[0].ID != dev.ID {
+		t.Fatalf("Devices() = %+v, want current device", devices)
+	}
+
+	unregistered, err := UnregisterDevice(dir, dev.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unregistered.Status != "unregistered" || unregistered.UnregisteredAt == "" {
+		t.Fatalf("bad unregistered device: %+v", unregistered)
 	}
 }

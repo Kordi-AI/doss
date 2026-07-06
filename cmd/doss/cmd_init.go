@@ -150,8 +150,18 @@ ask the owner what identity their memory vault should commit as, then rerun:
 		if _, err := gitx.Run(d, "config", "user.email", email); err != nil {
 			return err
 		}
+		dev, err := vault.RegisterDevice(d)
+		if err != nil {
+			return err
+		}
+		if err := syncGit(d, "doss: register device "+dev.ID, true); err != nil {
+			return fmt.Errorf("vault attached and device registered locally, but upload failed: %w", err)
+		}
 		abs, _ := filepath.Abs(d)
 		fmt.Printf("✓ vault attached: %s\n  cloud copy: %s\n  this device now shares the same memory — `doss sync` keeps them aligned\n  have your agent read %s\n", abs, attachRef, vault.InstructionPath(abs))
+		if err := printDevices(abs); err != nil {
+			return err
+		}
 		return maybeConnect(*noConnect)
 	}
 
@@ -165,6 +175,9 @@ ask the owner what identity their memory vault should commit as, then rerun:
 		return err
 	}
 	if _, err := gitx.Run(d, "config", "user.email", email); err != nil {
+		return err
+	}
+	if _, err := vault.RegisterDevice(d); err != nil {
 		return err
 	}
 	if _, err := gitx.Run(d, "add", "-A"); err != nil {
@@ -214,8 +227,9 @@ ask the owner what identity their memory vault should commit as, then rerun:
 	fmt.Printf(`✓ vault ready: %s
   self/         Markdown facts about the owner (path = topic)
   peers/        Markdown notes others shared with you
-  notes/        Markdown scratch — never leaves this machine
+  notes/        Markdown scratch — never disclosed
   policy.yaml   disclosure rules (default: nothing leaves)
+  devices/      synced device registry
   INSTRUCTION.md agent entry rules
   CONTENT.md     content maintenance rules
   DISCLOSURE.md  outbound disclosure/access rules
@@ -226,6 +240,9 @@ next steps:
   1. have your agent read %s
   2. edit memory freely; run "doss check --changed" after edits, "doss sync" when done
 `, abs, cloud, vault.InstructionPath(abs))
+	if err := printDevices(abs); err != nil {
+		return err
+	}
 
 	if cloud == "local only" {
 		fmt.Println(`  3. add cloud sync anytime:

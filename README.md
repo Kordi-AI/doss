@@ -19,6 +19,7 @@ wiring, and policy-backed disclosure controls and logs.
 | Preference vault | `~/.doss/self/`, `peers/`, `notes/` | Stores long-term preferences, facts, and notes as Markdown files. |
 | Agent rules | `~/.doss/INSTRUCTION.md`, `CONTENT.md`, `DISCLOSURE.md` | Splits entry routing, content maintenance, and outbound disclosure rules. |
 | Disclosure policy | `~/.doss/policy.yaml` | Maps groups of people to `full`, `rough`, or `no` disclosure for owner topics. Default: deny. |
+| Device registry | `~/.doss/devices/` | Synced records of devices attached to the vault: `active` or `unregistered`. |
 | Local access policy | `~/.doss/local/access.yaml` | Gitignored, device-local rules for non-owner tasks on this machine's files. |
 | Audit ledger | `doss log` | Records who was told what; it does not authorize disclosure. |
 | Sync | `doss sync` | Validates, commits, pulls, and pushes the vault. |
@@ -66,6 +67,7 @@ For cloud sync and multi-device setup, see the
 | `doss connect` | Wire the vault into installed agents; rerun after installing a new agent. |
 | `doss check` | Validate memory files; `--changed` checks only files touched since the last commit. |
 | `doss sync` | Commit, pull, and push; refuses to sync invalid vault state. |
+| `doss devices` | List synced device registrations; `unregister <id>` marks another device inactive. |
 | `doss log` | Record or read the disclosure ledger; records include `--level rough|full`. |
 | `doss doctor` | Show vault health, sync, wiring, hooks, and tidy hints; `--fix` repairs wiring. |
 | `doss tidy` | List stale facts, unconfirmed guesses, and notes backlog for owner judgment. |

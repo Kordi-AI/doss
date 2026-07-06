@@ -22,6 +22,9 @@ func cmdSync(args []string) error {
 	if err != nil {
 		return err
 	}
+	if _, err := vault.RegisterDevice(d); err != nil {
+		return err
+	}
 
 	// Only validated state ever syncs.
 	issues, err := check.Vault(d)
@@ -35,6 +38,10 @@ func cmdSync(args []string) error {
 		return fmt.Errorf("refusing to sync: %d problem(s) — nothing was committed", len(issues))
 	}
 
+	return syncGit(d, "doss sync: "+time.Now().Format("2006-01-02 15:04"), *quiet)
+}
+
+func syncGit(d, msg string, quiet bool) error {
 	dirty, err := gitx.Dirty(d)
 	if err != nil {
 		return err
@@ -44,7 +51,6 @@ func cmdSync(args []string) error {
 		if _, err := gitx.Run(d, "add", "-A"); err != nil {
 			return err
 		}
-		msg := "doss sync: " + time.Now().Format("2006-01-02 15:04")
 		if _, err := gitx.Run(d, "commit", "-m", msg); err != nil {
 			return err
 		}
@@ -81,7 +87,7 @@ func cmdSync(args []string) error {
 	case pushed:
 		fmt.Println("✓ up to date with remote")
 	default:
-		if !*quiet {
+		if !quiet {
 			fmt.Println("✓ nothing to sync")
 		}
 	}
