@@ -45,7 +45,9 @@ func cmdSync(args []string) error {
 		return fmt.Errorf("refusing to sync: %d problem(s) — nothing was committed", len(issues))
 	}
 
-	return syncGit(d, "doss sync: "+time.Now().Format("2006-01-02 15:04"), *quiet)
+	return syncGitWithPrePush(d, "doss sync: "+time.Now().Format("2006-01-02 15:04"), *quiet, func() error {
+		return ensureCurrentDeviceCanSync(d)
+	})
 }
 
 func ensureCurrentDeviceCanSync(d string) error {
@@ -64,6 +66,10 @@ func ensureCurrentDeviceCanSync(d string) error {
 }
 
 func syncGit(d, msg string, quiet bool) error {
+	return syncGitWithPrePush(d, msg, quiet, nil)
+}
+
+func syncGitWithPrePush(d, msg string, quiet bool, prePush func() error) error {
 	dirty, err := gitx.Dirty(d)
 	if err != nil {
 		return err
@@ -92,6 +98,11 @@ func syncGit(d, msg string, quiet bool) error {
 			if !(gitx.Upstream(d) == "" && strings.Contains(out, "couldn't find remote ref")) {
 				_, _ = gitx.Run(d, "rebase", "--abort")
 				return fmt.Errorf("pull hit a conflict; sync aborted safely, nothing lost.\nresolve by hand in %s (both versions are in git), then rerun `doss sync`.\ngit said: %s", d, out)
+			}
+		}
+		if prePush != nil {
+			if err := prePush(); err != nil {
+				return err
 			}
 		}
 		if out, err := gitx.Run(d, pushArgs...); err != nil {

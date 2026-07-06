@@ -179,6 +179,58 @@ func TestSyncUsesCurrentBranchWhenNoUpstream(t *testing.T) {
 	}
 }
 
+func TestSyncRechecksCurrentDeviceAfterPull(t *testing.T) {
+	dir := initTestVault(t)
+	t.Setenv("DOSS_HOME", dir)
+	id := "test-device"
+	runGit(t, dir, "config", "--local", "doss.device", id)
+
+	remote := filepath.Join(t.TempDir(), "remote.git")
+	runGit(t, t.TempDir(), "init", "--bare", remote)
+	runGit(t, dir, "remote", "add", "origin", remote)
+	if err := cmdSync([]string{"--quiet"}); err != nil {
+		t.Fatal(err)
+	}
+
+	admin := filepath.Join(t.TempDir(), "admin")
+	runGit(t, t.TempDir(), "clone", "--branch", "main", remote, admin)
+	runGit(t, admin, "config", "user.name", "Admin")
+	runGit(t, admin, "config", "user.email", "admin@example.com")
+	devFile := filepath.Join(admin, "devices", id+".yaml")
+	raw, err := os.ReadFile(devFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deactivated := strings.ReplaceAll(string(raw), "status: active", "status: deactivated")
+	deactivated = strings.ReplaceAll(deactivated, "deactivated_at: \"\"", "deactivated_at: \"2026-07-06T12:00:00Z\"")
+	if err := os.WriteFile(devFile, []byte(deactivated), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, admin, "add", "-A")
+	runGit(t, admin, "commit", "-m", "deactivate device")
+	runGit(t, admin, "push")
+
+	profile := filepath.Join(dir, "self", "profile", "style.md")
+	if err := os.MkdirAll(filepath.Dir(profile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(profile, []byte("Prefers short updates.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdSync([]string{"--quiet"}); err == nil || !strings.Contains(err.Error(), "is deactivated") {
+		t.Fatalf("sync should stop after pulling current-device deactivation, got: %v", err)
+	}
+
+	cmd := exec.Command("git", "--git-dir", remote, "ls-tree", "-r", "--name-only", "main")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("reading remote tree failed:\n%s", out)
+	}
+	if strings.Contains(string(out), "self/profile/style.md") {
+		t.Fatalf("deactivated device should not push new owner facts, remote tree:\n%s", out)
+	}
+}
+
 func TestSyncRefusesDeactivatedCurrentDevice(t *testing.T) {
 	dir := initTestVault(t)
 	t.Setenv("DOSS_HOME", dir)
@@ -283,9 +335,10 @@ func TestDeactivateAnotherRegisteredDevice(t *testing.T) {
 	}
 }
 
-func TestDossSectionDoesNotMentionAnswerCommand(t *testing.T) {
+func TestDossSectionDoesNotMentionRemovedDisclosureCommand(t *testing.T) {
 	section := dossSection("/tmp/doss-test-vault")
-	if strings.Contains(section, "doss answer") {
+	removedCommand := "doss " + "answer"
+	if strings.Contains(section, removedCommand) {
 		t.Fatalf("managed section still points agents at a removed command:\n%s", section)
 	}
 	if !strings.Contains(section, "doss log --record") {
