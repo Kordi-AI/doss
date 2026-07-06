@@ -34,7 +34,7 @@ type Device struct {
 	Label                string `yaml:"label"`
 	Status               string `yaml:"status"`
 	RegisteredAt         string `yaml:"registered_at"`
-	UnregisteredAt       string `yaml:"unregistered_at"`
+	DeactivatedAt        string `yaml:"deactivated_at"`
 	GitHubRepo           string `yaml:"github_repo,omitempty"`
 	DeployKeyID          int64  `yaml:"deploy_key_id,omitempty"`
 	DeployKeyTitle       string `yaml:"deploy_key_title,omitempty"`
@@ -174,14 +174,14 @@ func RegisterDevice(dir string) (Device, error) {
 			dev.RegisteredAt = now
 		}
 		dev.Status = "active"
-		dev.UnregisteredAt = ""
+		dev.DeactivatedAt = ""
 	}
 	return dev, writeDeviceFile(dir, dev)
 }
 
-// UnregisterDevice marks one device as no longer active, preserving its record
+// DeactivateDevice marks one device as no longer active, preserving its record
 // for audit and ledger interpretation.
-func UnregisterDevice(dir, id string) (Device, error) {
+func DeactivateDevice(dir, id string) (Device, error) {
 	dev, err := readDeviceFile(dir, id)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -193,8 +193,8 @@ func UnregisterDevice(dir, id string) (Device, error) {
 			RegisteredAt: time.Now().UTC().Format(time.RFC3339),
 		}
 	}
-	dev.Status = "unregistered"
-	dev.UnregisteredAt = time.Now().UTC().Format(time.RFC3339)
+	dev.Status = "deactivated"
+	dev.DeactivatedAt = time.Now().UTC().Format(time.RFC3339)
 	return dev, writeDeviceFile(dir, dev)
 }
 

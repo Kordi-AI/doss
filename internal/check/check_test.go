@@ -389,7 +389,7 @@ func TestCheckLedger(t *testing.T) {
 func TestCheckDevices(t *testing.T) {
 	dir := t.TempDir()
 	write(t, filepath.Join(dir, "policy.yaml"), "groups: {}\ncan-see: {}\n")
-	valid := "id: macbook-1234\nlabel: MacBook\nstatus: active\nregistered_at: \"2026-07-05T12:00:00Z\"\nunregistered_at: \"\"\n"
+	valid := "id: macbook-1234\nlabel: MacBook\nstatus: active\nregistered_at: \"2026-07-05T12:00:00Z\"\ndeactivated_at: \"\"\n"
 	write(t, filepath.Join(dir, "devices", "macbook-1234.yaml"), valid)
 	if issues, err := Vault(dir); err != nil {
 		t.Fatal(err)
@@ -422,13 +422,13 @@ func TestCheckDevices(t *testing.T) {
 	}
 
 	write(t, filepath.Join(dir, "devices", "old.yaml"),
-		"id: old\nlabel: Old Device\nstatus: unregistered\nregistered_at: \"2026-07-05T12:00:00Z\"\nunregistered_at: \"2026-07-06T12:00:00Z\"\n")
+		"id: old\nlabel: Old Device\nstatus: deactivated\nregistered_at: \"2026-07-05T12:00:00Z\"\ndeactivated_at: \"2026-07-06T12:00:00Z\"\n")
 	if issues, err := Vault(dir); err != nil {
 		t.Fatal(err)
 	} else {
 		for _, is := range issues {
 			if is.File == filepath.ToSlash(filepath.Join("devices", "old.yaml")) && is.Code == "E_DEVICE" {
-				t.Fatalf("unregistered device should pass, got %v", issues)
+				t.Fatalf("deactivated device should pass, got %v", issues)
 			}
 		}
 	}

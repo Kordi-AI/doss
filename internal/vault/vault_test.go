@@ -114,7 +114,7 @@ func TestInstructionTemplatesExplainFactShapeAndDisclosure(t *testing.T) {
 	}
 }
 
-func TestRegisterAndUnregisterDevice(t *testing.T) {
+func TestRegisterAndDeactivateDevice(t *testing.T) {
 	dir := t.TempDir()
 	cmd := exec.Command("git", "-C", dir, "init", "-b", "main")
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -146,11 +146,11 @@ func TestRegisterAndUnregisterDevice(t *testing.T) {
 		t.Fatalf("deploy key metadata not recorded: %+v", withKey)
 	}
 
-	unregistered, err := UnregisterDevice(dir, dev.ID)
+	deactivated, err := DeactivateDevice(dir, dev.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if unregistered.Status != "unregistered" || unregistered.UnregisteredAt == "" {
-		t.Fatalf("bad unregistered device: %+v", unregistered)
+	if deactivated.Status != "deactivated" || deactivated.DeactivatedAt == "" {
+		t.Fatalf("bad deactivated device: %+v", deactivated)
 	}
 }

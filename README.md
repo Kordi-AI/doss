@@ -68,7 +68,7 @@ For cloud sync and multi-device setup, see the
 | `doss check` | Validate memory files; `--changed` checks only files touched since the last commit. |
 | `doss sync` | Commit, pull, and push; refuses to sync invalid vault state. |
 | `doss devices` | List synced device registrations. |
-| `doss unregister` | Choose a non-current device, revoke its recorded GitHub deploy key, then mark it inactive. |
+| `doss deactivate` | Choose a non-current device, revoke its recorded GitHub deploy key, then mark it inactive. |
 | `doss log` | Record or read the disclosure ledger; records include `--level rough|full`. |
 | `doss doctor` | Show vault health, sync, wiring, hooks, and tidy hints; `--fix` repairs wiring. |
 | `doss tidy` | List stale facts, unconfirmed guesses, and notes backlog for owner judgment. |
@@ -82,7 +82,7 @@ enforcement requires a serving layer that applies policy without giving the
 outward-facing agent raw vault access.
 
 For GitHub-backed vaults, Doss gives each registered device its own writable
-deploy key and removes that key on unregister. This stops future Doss-managed
+deploy key and removes that key on deactivate. This stops future Doss-managed
 sync from that device, but it cannot erase any local snapshot already cloned;
 also revoke any separate owner account tokens or SSH keys left on a lost device.
 

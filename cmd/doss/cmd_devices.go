@@ -18,16 +18,16 @@ func cmdDevices(args []string) error {
 		return err
 	}
 	if fs.NArg() > 0 {
-		if fs.NArg() != 2 || fs.Arg(0) != "unregister" {
-			return fmt.Errorf("usage: doss devices [unregister <device-id>]")
+		if fs.NArg() != 2 || fs.Arg(0) != "deactivate" {
+			return fmt.Errorf("usage: doss devices [deactivate <device-id>]")
 		}
-		return unregisterDevice(d, fs.Arg(1))
+		return deactivateDevice(d, fs.Arg(1))
 	}
 	return printDevices(d)
 }
 
-func cmdUnregister(args []string) error {
-	fs := flag.NewFlagSet("unregister", flag.ExitOnError)
+func cmdDeactivate(args []string) error {
+	fs := flag.NewFlagSet("deactivate", flag.ExitOnError)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -37,21 +37,21 @@ func cmdUnregister(args []string) error {
 	}
 	switch fs.NArg() {
 	case 0:
-		id, err := chooseDeviceToUnregister(d)
+		id, err := chooseDeviceToDeactivate(d)
 		if err != nil {
 			return err
 		}
-		return unregisterDevice(d, id)
+		return deactivateDevice(d, id)
 	case 1:
-		return unregisterDevice(d, fs.Arg(0))
+		return deactivateDevice(d, fs.Arg(0))
 	default:
-		return fmt.Errorf("usage: doss unregister [device-id]")
+		return fmt.Errorf("usage: doss deactivate [device-id]")
 	}
 }
 
-func chooseDeviceToUnregister(dir string) (string, error) {
+func chooseDeviceToDeactivate(dir string) (string, error) {
 	if !stdinIsTTY() {
-		return "", fmt.Errorf("usage: doss unregister [device-id]; run `doss unregister` in a terminal to choose a device, or pass a device id for non-interactive use")
+		return "", fmt.Errorf("usage: doss deactivate [device-id]; run `doss deactivate` in a terminal to choose a device, or pass a device id for non-interactive use")
 	}
 	current := vault.DeviceID(dir)
 	devices, err := vault.Devices(dir)
@@ -74,18 +74,18 @@ func chooseDeviceToUnregister(dir string) (string, error) {
 	if len(candidates) == 0 {
 		return "", fmt.Errorf("no other active devices are registered")
 	}
-	choice := newPrompter().choose("Select a device to unregister:", options...)
+	choice := newPrompter().choose("Select a device to deactivate:", options...)
 	return candidates[choice].ID, nil
 }
 
-func unregisterDevice(dir, id string) error {
+func deactivateDevice(dir, id string) error {
 	if id == vault.DeviceID(dir) {
-		return fmt.Errorf("use `doss uninstall` to unregister the current device")
+		return fmt.Errorf("use `doss uninstall` to deactivate the current device")
 	}
 	if dirty, err := gitx.Dirty(dir); err != nil {
 		return err
 	} else if dirty {
-		return fmt.Errorf("vault has uncommitted changes; run `doss sync` before unregistering another device")
+		return fmt.Errorf("vault has uncommitted changes; run `doss sync` before deactivating another device")
 	}
 	devices, err := vault.Devices(dir)
 	if err != nil {
@@ -108,10 +108,10 @@ func unregisterDevice(dir, id string) error {
 	} else {
 		fmt.Printf("warning: no GitHub deploy key recorded for %s; only the synced device registry will be updated\n", id)
 	}
-	if _, err := vault.UnregisterDevice(dir, id); err != nil {
+	if _, err := vault.DeactivateDevice(dir, id); err != nil {
 		return err
 	}
-	if err := syncGit(dir, "doss: unregister device "+id, false); err != nil {
+	if err := syncGit(dir, "doss: deactivate device "+id, false); err != nil {
 		return err
 	}
 	return printDevices(dir)
