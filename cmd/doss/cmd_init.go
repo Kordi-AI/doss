@@ -2,11 +2,8 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,7 +18,7 @@ import (
 func cmdInit(args []string) error {
 	fs := flag.NewFlagSet("init", flag.ExitOnError)
 	dir := fs.String("dir", "", "vault directory (default $DOSS_HOME or ~/.doss)")
-	github := fs.Bool("github", false, "create a private GitHub repo as the cloud copy (requires gh)")
+	github := fs.Bool("github", false, "create a private GitHub repo as the cloud copy (requires gh or token)")
 	repo := fs.String("repo", "my-doss", "repo name used with --github")
 	remote := fs.String("remote", "", "attach an existing git remote URL as the cloud copy")
 	from := fs.String("from", "", "attach this device to an existing vault: GitHub owner/repo or any git URL")
@@ -70,7 +67,7 @@ func cmdInit(args []string) error {
 				attachRef = p.ask("GitHub repo (owner/name, e.g. you/my-doss)", "")
 			}
 			if !ghLoggedIn() {
-				fmt.Println("gh CLI isn't logged in — a GitHub personal access token (repo scope) works too.")
+				fmt.Println("gh CLI isn't logged in — a GitHub personal access token with repo administration permission works too.")
 				attachToken = p.secret("GitHub token")
 			}
 		}
@@ -92,7 +89,7 @@ func cmdInit(args []string) error {
 				wantGitHub = true
 				*repo = p.ask("  repo name", *repo)
 				if !ghLoggedIn() {
-					fmt.Println("  gh CLI isn't logged in — a GitHub personal access token (repo scope) works too.")
+					fmt.Println("  gh CLI isn't logged in — a GitHub personal access token with repo administration permission works too.")
 					cloudToken = p.secret("  GitHub token")
 				}
 			}
@@ -130,7 +127,6 @@ ask the owner what identity their memory vault should commit as, then rerun:
 			if out, err := exec.Command("git", "clone", tokenCloneURL(attachRef, attachToken), d).CombinedOutput(); err != nil {
 				return fmt.Errorf("clone failed: %s", sanitizeToken(strings.TrimSpace(string(out)), attachToken))
 			}
-			fmt.Println("note: the token is stored in this vault's git remote URL (a local file); prefer `gh auth login` when you can")
 		} else if err := cloneVault(attachRef, d); err != nil {
 			return err
 		}
@@ -153,6 +149,22 @@ ask the owner what identity their memory vault should commit as, then rerun:
 		dev, err := vault.RegisterDevice(d)
 		if err != nil {
 			return err
+		}
+		if repo, ok := githubRepoFromRef(attachRef); ok {
+			token := attachToken
+			if token == "" {
+				var err error
+				token, err = githubAuthToken()
+				if err != nil {
+					return fmt.Errorf("attached GitHub vault, but could not install this device's deploy key; authenticate with `gh auth login` and retry: %w", err)
+				}
+			}
+			if _, err := gitx.Run(d, "config", "--local", "doss.githubRepo", repo); err != nil {
+				return err
+			}
+			if err := ensureGitHubDeviceKey(d, token); err != nil {
+				return fmt.Errorf("attached GitHub vault, but could not install this device's deploy key: %w", err)
+			}
 		}
 		if err := syncGit(d, "doss: register device "+dev.ID, true); err != nil {
 			return fmt.Errorf("vault attached and device registered locally, but upload failed: %w", err)
@@ -189,36 +201,43 @@ ask the owner what identity their memory vault should commit as, then rerun:
 
 	cloud := "local only"
 	switch {
-	case wantGitHub && cloudToken != "":
-		url, fullName, err := githubCreateRepoWithToken(cloudToken, *repo)
+	case wantGitHub:
+		token := cloudToken
+		if token == "" {
+			var err error
+			token, err = githubAuthToken()
+			if err != nil {
+				return fmt.Errorf("--github needs GitHub auth to create the repo and install a per-device deploy key; run `gh auth login` or pass a token when prompted: %w", err)
+			}
+		}
+		_, fullName, err := githubCreateRepoWithToken(token, *repo)
 		if err != nil {
 			return err
 		}
-		if _, err := gitx.Run(d, "remote", "add", "origin", url); err != nil {
+		if _, err := gitx.Run(d, "config", "--local", "doss.githubRepo", fullName); err != nil {
 			return err
 		}
-		if out, err := gitx.Run(d, "push", "-u", "origin", "main"); err != nil {
-			return fmt.Errorf("push failed: %s", sanitizeToken(out, cloudToken))
+		if err := ensureGitHubDeviceKey(d, token); err != nil {
+			return fmt.Errorf("created GitHub repo, but could not install this device's deploy key: %w", err)
+		}
+		if err := syncGit(d, "doss: configure device deploy key", true); err != nil {
+			return fmt.Errorf("push failed: %w", err)
 		}
 		cloud = "private GitHub repo " + fullName
-		fmt.Println("note: the token is stored in this vault's git remote URL (a local file); prefer `gh auth login` when you can")
-	case wantGitHub:
-		if _, err := exec.LookPath("gh"); err != nil {
-			return fmt.Errorf("--github needs the GitHub CLI (gh). install: https://cli.github.com — or use --remote <url>")
-		}
-		out, err := exec.Command("gh", "repo", "create", *repo,
-			"--private", "--source", d, "--remote", "origin", "--push",
-			"--description", "My private Doss memory vault").CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("gh repo create failed: %s", string(out))
-		}
-		cloud = "private GitHub repo " + *repo
 	case *remote != "":
 		if _, err := gitx.Run(d, "remote", "add", "origin", *remote); err != nil {
 			return err
 		}
-		if out, err := gitx.Run(d, "push", "-u", "origin", "main"); err != nil {
-			return fmt.Errorf("push to %s failed: %s", *remote, out)
+		if repo, ok := githubRepoFromRef(*remote); ok {
+			if _, err := gitx.Run(d, "config", "--local", "doss.githubRepo", repo); err != nil {
+				return err
+			}
+			if err := ensureGitHubDeviceKey(d, ""); err != nil {
+				return fmt.Errorf("GitHub remote needs a per-device deploy key before sync: %w", err)
+			}
+		}
+		if err := syncGit(d, "doss: configure cloud sync", true); err != nil {
+			return fmt.Errorf("push to %s failed: %w", *remote, err)
 		}
 		cloud = *remote
 	}
@@ -312,32 +331,6 @@ func sanitizeToken(s, token string) string {
 		return s
 	}
 	return strings.ReplaceAll(s, token, "***")
-}
-
-func githubCreateRepoWithToken(token, name string) (cloneURL, fullName string, err error) {
-	req, err := http.NewRequest("POST", "https://api.github.com/user/repos",
-		strings.NewReader(fmt.Sprintf(`{"name":%q,"private":true,"description":"My private Doss memory vault"}`, name)))
-	if err != nil {
-		return "", "", err
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Accept", "application/vnd.github+json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", "", err
-	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if resp.StatusCode != 201 {
-		return "", "", fmt.Errorf("GitHub said %s — check the token (needs repo scope) and that %q doesn't already exist", resp.Status, name)
-	}
-	var out struct {
-		FullName string `json:"full_name"`
-	}
-	if err := json.Unmarshal(body, &out); err != nil || out.FullName == "" {
-		return "", "", fmt.Errorf("unexpected GitHub response")
-	}
-	return "https://" + token + "@github.com/" + out.FullName + ".git", out.FullName, nil
 }
 
 // --- tiny prompt helpers (stdlib only) ---

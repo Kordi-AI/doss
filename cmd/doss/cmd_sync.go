@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -22,7 +23,13 @@ func cmdSync(args []string) error {
 	if err != nil {
 		return err
 	}
+	if err := ensureCurrentDeviceCanSync(d); err != nil {
+		return err
+	}
 	if _, err := vault.RegisterDevice(d); err != nil {
+		return err
+	}
+	if err := ensureGitHubDeviceKey(d, ""); err != nil {
 		return err
 	}
 
@@ -39,6 +46,21 @@ func cmdSync(args []string) error {
 	}
 
 	return syncGit(d, "doss sync: "+time.Now().Format("2006-01-02 15:04"), *quiet)
+}
+
+func ensureCurrentDeviceCanSync(d string) error {
+	id := vault.DeviceID(d)
+	dev, err := vault.DeviceRecord(d, id)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if dev.Status == "unregistered" {
+		return fmt.Errorf("this device (%s) is unregistered; refusing to sync. Reattach it with `doss init --from <repo>` after the owner approves a new device key", id)
+	}
+	return nil
 }
 
 func syncGit(d, msg string, quiet bool) error {

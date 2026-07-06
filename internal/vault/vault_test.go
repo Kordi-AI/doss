@@ -138,6 +138,13 @@ func TestRegisterAndUnregisterDevice(t *testing.T) {
 	if len(devices) != 1 || devices[0].ID != dev.ID {
 		t.Fatalf("Devices() = %+v, want current device", devices)
 	}
+	withKey, err := SetDeviceDeployKey(dir, dev.ID, "owner/repo", "doss "+dev.ID, "SHA256:abc", 42)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if withKey.GitHubRepo != "owner/repo" || withKey.DeployKeyID != 42 || withKey.DeployKeyFingerprint == "" {
+		t.Fatalf("deploy key metadata not recorded: %+v", withKey)
+	}
 
 	unregistered, err := UnregisterDevice(dir, dev.ID)
 	if err != nil {

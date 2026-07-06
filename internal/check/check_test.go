@@ -398,6 +398,22 @@ func TestCheckDevices(t *testing.T) {
 	}
 
 	write(t, filepath.Join(dir, "devices", "macbook-1234.yaml"),
+		valid+"github_repo: owner/repo\ndeploy_key_id: 42\ndeploy_key_title: doss macbook-1234\ndeploy_key_fingerprint: SHA256:abc\n")
+	if issues, err := Vault(dir); err != nil {
+		t.Fatal(err)
+	} else if hasCode(issues, "E_DEVICE") {
+		t.Fatalf("valid deploy key metadata should pass, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "devices", "macbook-1234.yaml"),
+		valid+"github_repo: owner/repo\n")
+	if issues, err := Files(dir, []string{filepath.ToSlash(filepath.Join("devices", "macbook-1234.yaml"))}); err != nil {
+		t.Fatal(err)
+	} else if !hasCode(issues, "E_DEVICE") {
+		t.Fatalf("github_repo without deploy_key_id should fail, got %v", issues)
+	}
+
+	write(t, filepath.Join(dir, "devices", "macbook-1234.yaml"),
 		"id: other\nlabel: MacBook\nstatus: disabled\nregistered_at: soon\n")
 	if issues, err := Files(dir, []string{filepath.ToSlash(filepath.Join("devices", "macbook-1234.yaml"))}); err != nil {
 		t.Fatal(err)
