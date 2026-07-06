@@ -236,6 +236,24 @@ func TestConnectCustomFilePersistsRefreshesAndRemoves(t *testing.T) {
 	}
 }
 
+func TestConnectRejectsCustomTargetInsideVault(t *testing.T) {
+	home := t.TempDir()
+	dir := initTestVault(t)
+	t.Setenv("HOME", home)
+	t.Setenv("DOSS_HOME", dir)
+
+	err := cmdConnect([]string{"--file", filepath.Join(dir, "INSTRUCTION.md")})
+	if err == nil {
+		t.Fatal("connect --file should reject vault-internal files")
+	}
+	if !strings.Contains(err.Error(), "not a file inside the vault") {
+		t.Fatalf("unexpected error for vault-internal custom target: %v", err)
+	}
+	if targets := loadCustomTargets(); len(targets) != 0 {
+		t.Fatalf("rejected custom target should not be persisted, got %v", targets)
+	}
+}
+
 func TestDoctorFixRepairsAgentWiring(t *testing.T) {
 	home := t.TempDir()
 	dir := initTestVault(t)
