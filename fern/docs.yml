@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://schema.buildwithfern.dev/docs-yml.json
+
+instances:
+  - url: doss.docs.buildwithfern.com
+
+title: Doss
+
+colors:
+  accentPrimary: '#3e4d46'
+  background: '#fbfaf8'
+
+agents:
+  page-directive: "For the complete Doss documentation index, fetch https://doss.docs.buildwithfern.com/llms.txt. For clean Markdown of any page, append .md to the page URL."
+
+check:
+  rules:
+    broken-links: error
+
+navigation:
+  - section: Doss
+    contents:
+      - page: Overview
+        path: docs/pages/index.mdx
+      - page: Getting started
+        path: docs/pages/getting-started.mdx
+      - page: Concepts
+        path: docs/pages/concepts.mdx
+      - page: Commands
+        path: docs/pages/commands.mdx
+      - page: How it works
+        path: docs/pages/how-it-works.mdx

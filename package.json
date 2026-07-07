@@ -1,21 +1,14 @@
 {
   "name": "doss-docs",
   "private": true,
-  "description": "Documentation site for Doss",
+  "description": "Fern documentation site for Doss",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "check": "fern check --warnings --local",
+    "docs:dev": "fern docs dev",
+    "docs:preview": "fern generate --docs --preview --no-prompt",
+    "docs:publish": "fern generate --docs --no-prompt"
   },
-  "dependencies": {
-    "next": "^16.2.10",
-    "nextra": "^4.6.1",
-    "nextra-theme-docs": "^4.6.1",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
-  },
-  "overrides": {
-    "postcss": "^8.5.10",
-    "zod": "4.3.6"
+  "devDependencies": {
+    "fern-api": "5.65.3"
   }
 }

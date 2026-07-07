@@ -1,7 +1,0 @@
-export default {
-  index: 'Overview',
-  'getting-started': 'Getting started',
-  concepts: 'Concepts',
-  commands: 'Commands',
-  'how-it-works': 'How it works'
-}

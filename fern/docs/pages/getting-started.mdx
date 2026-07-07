@@ -1,0 +1,95 @@
+---
+description: Install Doss, initialize a vault, connect agents, and learn the four daily habits.
+---
+
+# Getting started
+
+## Install
+
+### Do it yourself
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Kordi-AI/doss/main/install.sh | sh
+doss init
+```
+
+`doss init` is guided setup. The installer grabs a prebuilt binary for your
+OS/arch (macOS/Linux, amd64/arm64), falling back to a source build if you have
+Go. No prebuilt for your platform?
+
+```sh
+git clone https://github.com/Kordi-AI/doss && cd doss && ./install.sh
+```
+
+### Ask your agent
+
+Paste this to your agent:
+
+> Please install Doss and set up my memory vault:
+>
+> 1. `git clone https://github.com/Kordi-AI/doss && cd doss && ./install.sh`
+> 2. Ask me which name and email my vault's git commits should use, then run
+>    `doss init --git-name "..." --git-email "..."`. Use `--from owner/repo` if
+>    I already have a cloud vault. Use `--github --repo my-doss` only if I ask
+>    for a new private GitHub backup now.
+> 3. Check the `connect` output: if your own tool is not listed, wire yourself
+>    with `doss connect --file PATH_TO_INSTRUCTION_FILE`.
+> 4. Read `~/.doss/INSTRUCTION.md` and manage my memory by its rules from now on.
+
+## Set up the vault
+
+Run in a terminal. `doss init` walks you through:
+
+1. New vault or attach to a cloud one.
+
+   Create a fresh vault on this machine, or connect this device to an existing
+   one.
+
+2. Commit identity.
+
+   The name and email your vault's git commits are signed with. Doss asks rather
+   than guessing.
+
+3. Optional cloud backup.
+
+   Back the vault up to a private GitHub repo. Doss uses `gh` or a token to
+   create the repo and install this device's writable deploy key, then future
+   sync uses that device key. This enables sync and additional devices.
+
+> **Second device:** Run `doss init --from you/my-doss`. Every device then
+> shares one memory, kept aligned by `doss sync`.
+
+## Wire your agents
+
+`init` automatically runs `doss connect`, which drops a small managed section
+into each installed agent's always-loaded global instruction file:
+
+- Claude Code: `~/.claude/CLAUDE.md`
+- Codex: `~/.codex/AGENTS.md`
+- Gemini CLI: `~/.gemini/GEMINI.md`
+- OpenClaw: workspace `AGENTS.md`
+- Windsurf: global rules
+
+Any other agent works too:
+
+```sh
+doss connect --file PATH_TO_INSTRUCTION_FILE
+```
+
+The section is injected into every session of every project, so whichever agent
+sets Doss up, every other agent on the machine discovers it next session.
+
+Verify anytime with `doss doctor` (`--fix` repairs). Undo with
+`doss connect --remove`.
+
+## The four habits
+
+After setup, an agent only needs these. Details live in the generated
+`~/.doss/INSTRUCTION.md`.
+
+| When | Do |
+| --- | --- |
+| Learned something durable | Write a small file under `self/`; the path is the topic |
+| Need to recall | `ls`, `rg`, and read files |
+| Finished editing | `doss check --changed`; errors are precise |
+| Wrapping up | `doss sync`; unvalidated content never syncs |
