@@ -1,8 +1,10 @@
-import { Callout } from 'nextra/components'
+---
+description: Doss CLI reference for setup, connect, validation, sync, requester views, devices, hooks, and disclosure logging.
+---
 
 # Commands
 
-`doss COMMAND [flags]` · vault location: `$DOSS_HOME`, default `~/.doss`
+`doss COMMAND [flags]` - vault location: `$DOSS_HOME`, default `~/.doss`
 
 ## Reference
 
@@ -35,21 +37,20 @@ import { Callout } from 'nextra/components'
 | `doss init --dir PATH` | Initialize a vault outside the default `~/.doss` location. |
 | `doss init --no-connect` | Initialize without wiring agent instruction files. |
 
-<Callout type="warning">
-  `doss deactivate` blocks future Doss-managed GitHub sync when the device has
-  recorded deploy-key metadata. It cannot erase an already cloned local plaintext
-  vault, and it cannot revoke separate owner account credentials such as GitHub
-  sessions, PATs, or personal SSH keys.
-</Callout>
+> **Warning:** `doss deactivate` blocks future Doss-managed GitHub sync when the
+> device has recorded deploy-key metadata. It cannot erase an already cloned
+> local plaintext vault, and it cannot revoke separate owner account credentials
+> such as GitHub sessions, PATs, or personal SSH keys.
 
 ## Who Runs What
 
-- **Agents, after editing memory**: `doss check --changed`, then fix any precise
+- **Agents, after editing memory:** `doss check --changed`, then fix any precise
   errors.
-- **Agents, at wrap-up**: `doss sync`.
-- **Agents, after allowed disclosure**: `doss log --record --to VERIFIED_ID --shared TOPIC --level rough or full`.
-- **Hosts / serving layers, before an external request**: `doss view --for VERIFIED_ID --out DIR`.
-- **Owners**: `init`, `devices`, `deactivate`, `doctor`, `tidy`, `uninstall`, and policy edits.
+- **Agents, at wrap-up:** `doss sync`.
+- **Agents, after allowed disclosure:** `doss log --record --to VERIFIED_ID --shared TOPIC --level rough or full`.
+- **Hosts / serving layers, before an external request:** `doss view --for VERIFIED_ID --out DIR`.
+- **Owners:** `init`, `devices`, `deactivate`, `doctor`, `tidy`, `uninstall`,
+  and policy edits.
 
 ## Frontmatter Fields
 

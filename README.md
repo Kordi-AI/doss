@@ -1,22 +1,29 @@
 # Doss docs site
 
 The documentation site for [Doss](https://github.com/Kordi-AI/doss), built with
-[Nextra](https://nextra.site). This lives on the `doss-docs` branch only — `main`
-stays pure Go.
+[Fern](https://buildwithfern.com/docs). This lives on the `doss-docs` branch
+only; `main` stays pure Go.
 
 ## Local
 
 ```sh
 npm install
-npm run dev     # http://localhost:3000
-npm run build   # static export → ./out
+npm run check
+npm run docs:dev
 ```
 
-## Deploy (Vercel)
+`fern docs dev` requires Node.js 22 or newer and `pnpm` on PATH. `fern check`
+works as the lightweight validation step for review.
 
-Import the repo on Vercel and set the **Production Branch** to `doss-docs`
-(Settings → Git). Framework preset: Next.js. It auto-builds on every push to
-this branch.
+## Deploy (Fern)
 
-Content lives in `content/*.mdx`; the sidebar order is `content/_meta.js`.
-Nextra 4 uses the App Router shell under `app/`.
+Publishing uses the `FERN_TOKEN` repository secret and runs from GitHub Actions
+on pushes to `doss-docs`:
+
+```sh
+npm run docs:preview
+npm run docs:publish
+```
+
+Content lives in `fern/docs/pages/*.mdx`; navigation and agent-readable output
+are configured in `fern/docs.yml`.

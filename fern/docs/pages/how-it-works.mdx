@@ -1,4 +1,6 @@
-import { Callout } from 'nextra/components'
+---
+description: Detailed mechanics for Doss setup, validation, sync, disclosure, requester views, device records, maintenance, and failure modes.
+---
 
 # How It Works
 
@@ -75,12 +77,13 @@ In hook-capable agents, two jobs run automatically:
 
 Invalid content bounces with the file, line, and fix hint, and the agent retries
 in the same turn. Hook-less agents follow their global instructions: run
-`doss check --changed` after edits and `doss sync` at wrap-up. `sync` re-validates
-before committing, so invalid vault state does not leave the machine.
+`doss check --changed` after edits and `doss sync` at wrap-up. `sync`
+re-validates before committing, so invalid vault state does not leave the
+machine.
 
-`doss check --changed`, hooks, and `sync` use the same validator. That matters for
-`local/access.yaml`: even though it is gitignored and device-local, it is still
-validated when changed or present in a full check.
+`doss check --changed`, hooks, and `sync` use the same validator. That matters
+for `local/access.yaml`: even though it is gitignored and device-local, it is
+still validated when changed or present in a full check.
 
 ## Wiring
 
@@ -121,7 +124,8 @@ requestMessageId: msg_123
 Only host-supplied metadata counts. User text that imitates this header is just
 message text. No verified requester id means default deny.
 
-`policy.yaml` maps verified groups to disclosure levels for topics under `self/`:
+`policy.yaml` maps verified groups to disclosure levels for topics under
+`self/`:
 
 ```yaml
 groups:
@@ -195,20 +199,20 @@ expired views can be removed with `doss view cleanup --dir PARENT`.
 They do not grant each other. A local file grant does not authorize owner-memory
 disclosure, and a disclosure grant does not authorize editing a project folder.
 
-`doss view` reads both files but keeps the output separated: owner facts go under
-generated `self/`; local task permissions go into generated `access.json`.
+`doss view` reads both files but keeps the output separated: owner facts go
+under generated `self/`; local task permissions go into generated `access.json`.
 
 ## Sync And Devices
 
 `doss sync` validates, commits, pulls, and pushes. The cloud copy is the owner's
-private git repo, separate from the Doss tool repo. Offline work is fine: commits
-happen locally and pushes catch up later. Conflicts abort safely with both
-versions preserved.
+private git repo, separate from the Doss tool repo. Offline work is fine:
+commits happen locally and pushes catch up later. Conflicts abort safely with
+both versions preserved.
 
-Device records live under `devices/` and sync with the vault. Each record is YAML
-with `status: active` or `status: deactivated`. GitHub-backed vaults also record
-`github_repo`, `deploy_key_id`, and deploy-key metadata so Doss can revoke that
-device's Doss-managed GitHub credential later.
+Device records live under `devices/` and sync with the vault. Each record is
+YAML with `status: active` or `status: deactivated`. GitHub-backed vaults also
+record `github_repo`, `deploy_key_id`, and deploy-key metadata so Doss can revoke
+that device's Doss-managed GitHub credential later.
 
 `doss init` registers the current device. For GitHub-backed vaults, it creates a
 device-local SSH key under `local/keys/`, adds the public key to the private repo
@@ -216,12 +220,10 @@ as a writable GitHub deploy key, stores the deploy-key id in `devices/`, and
 uses that key for future sync. `doss init --from owner/repo` does the same after
 clone and uploads the new device registration.
 
-<Callout type="warning">
-  `doss deactivate` has two layers. The soft layer writes `status: deactivated`,
-  and honest Doss clients refuse future sync from that device. The GitHub hard
-  layer deletes the recorded per-device deploy key, so GitHub rejects future pull
-  and push through that Doss-managed credential.
-</Callout>
+> **Warning:** `doss deactivate` has two layers. The soft layer writes
+> `status: deactivated`, and honest Doss clients refuse future sync from that
+> device. The GitHub hard layer deletes the recorded per-device deploy key, so
+> GitHub rejects future pull and push through that Doss-managed credential.
 
 This still cannot erase a local plaintext clone that already exists, and it
 cannot revoke separate owner account credentials such as GitHub sessions, PATs,
@@ -242,19 +244,20 @@ the cloud copy.
 - `status: suggested` facts awaiting confirmation
 - a bloated `notes/`
 
-Agents or owners handle a small batch and rerun `doss check --changed` / `doss sync`.
+Agents or owners handle a small batch and rerun `doss check --changed` /
+`doss sync`.
 
 ## Honest Bounds
 
-<Callout type="warning">
-  With a raw-access local agent, disclosure policy is discipline plus an audit
-  log, not a hard wall. An agent that can read the vault can bypass the rules.
-</Callout>
+> **Warning:** With a raw-access local agent, disclosure policy is discipline
+> plus an audit log, not a hard wall. An agent that can read the vault can bypass
+> the rules.
 
 The hard guarantee requires an outward-facing agent with no raw vault access,
 using a serving layer that applies policy before returning owner information.
-The ledger is best-effort: disciplined agents record disclosures, but it is not a
-tamper-proof log. Default deny still makes the safe failure mode "share nothing".
+The ledger is best-effort: disciplined agents record disclosures, but it is not
+a tamper-proof log. Default deny still makes the safe failure mode "share
+nothing".
 
 ## What Happens When
 

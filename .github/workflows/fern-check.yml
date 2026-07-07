@@ -1,0 +1,22 @@
+name: Fern Docs Check
+
+on:
+  pull_request:
+    branches:
+      - doss-docs
+  push:
+    branches:
+      - codex/**
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Fern
+        run: npm install -g fern-api@5.65.3
+
+      - name: Validate Fern configuration
+        run: fern check --warnings --local
