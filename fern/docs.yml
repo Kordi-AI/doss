@@ -33,6 +33,8 @@ theme:
 settings:
   dark-mode-code: true
 
+js: assets/root-markdown-action.js
+
 agents:
   page-directive: "For the complete Doss documentation index, fetch https://doss.docs.buildwithfern.com/llms.txt. For clean Markdown of any page, append .md to the page URL."
 
