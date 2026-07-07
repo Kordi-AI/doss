@@ -5,11 +5,6 @@ instances:
 
 title: Doss
 
-landing-page:
-  page: Doss
-  path: docs/pages/index.mdx
-  slug: /
-
 colors:
   accent-primary:
     light: '#405249'
@@ -46,6 +41,8 @@ redirects:
     destination: /
   - source: /doss/overview
     destination: /
+  - source: /overview
+    destination: /
   - source: /doss/getting-started
     destination: /getting-started
   - source: /doss/concepts
@@ -63,6 +60,9 @@ navigation:
   - section: Doss
     skip-slug: true
     contents:
+      - page: Overview
+        path: docs/pages/index.mdx
+        slug: /
       - page: Getting started
         path: docs/pages/getting-started.mdx
       - page: Concepts
