@@ -1,6 +1,6 @@
 # doss
 
-[![Documentation](https://img.shields.io/badge/docs-doss-6f6a60?style=flat&logo=readthedocs&logoColor=white)](https://doss-docs.vercel.app/)
+[![Documentation](https://img.shields.io/badge/docs-doss-6f6a60?style=flat&logo=readthedocs&logoColor=white)](https://doss.docs.buildwithfern.com/doss/overview)
 [![Release](https://img.shields.io/github/v/release/Kordi-AI/doss?style=flat&logo=github&logoColor=white&color=8b7a8f)](https://github.com/Kordi-AI/doss/releases)
 [![Go](https://img.shields.io/github/go-mod/go-version/Kordi-AI/doss?style=flat&logo=go&logoColor=white&color=71879b)](go.mod)
 [![macOS](https://img.shields.io/badge/macOS-supported-9c8068?style=flat&logo=apple&logoColor=white)](install.sh)
@@ -59,7 +59,7 @@ After setup, agents operate on the vault as normal files:
 | Disclosed owner info | Run `doss log --record --to <verified-id> --shared <topic> --level <rough|full>`. |
 
 For cloud sync and multi-device setup, see the
-[Getting Started docs](https://doss-docs.vercel.app/getting-started).
+[Getting Started docs](https://doss.docs.buildwithfern.com/doss/getting-started).
 
 ## Commands
 
@@ -98,4 +98,4 @@ also revoke any separate owner account tokens or SSH keys left on a lost device.
 
 ## Docs
 
-- [Documentation site](https://doss-docs.vercel.app/)
+- [Documentation site](https://doss.docs.buildwithfern.com/doss/overview)
