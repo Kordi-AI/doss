@@ -5,12 +5,55 @@ instances:
 
 title: Doss
 
+landing-page:
+  page: Doss
+  path: docs/pages/index.mdx
+  slug: /
+
 colors:
-  accentPrimary: '#3e4d46'
-  background: '#fbfaf8'
+  accent-primary:
+    light: '#405249'
+    dark: '#b9b19f'
+  background:
+    light: '#f4f1eb'
+    dark: '#151816'
+  border:
+    light: '#d7d0c5'
+    dark: '#394139'
+  sidebar-background:
+    light: '#ece7df'
+    dark: '#1c211d'
+  header-background:
+    light: '#f4f1eb'
+    dark: '#151816'
+  card-background:
+    light: '#ebe6dd'
+    dark: '#222820'
+
+theme:
+  sidebar: minimal
+  page-actions: toolbar
+  footer-nav: minimal
+
+settings:
+  dark-mode-code: true
 
 agents:
   page-directive: "For the complete Doss documentation index, fetch https://doss.docs.buildwithfern.com/llms.txt. For clean Markdown of any page, append .md to the page URL."
+
+redirects:
+  - source: /doss
+    destination: /
+  - source: /doss/overview
+    destination: /
+  - source: /doss/getting-started
+    destination: /getting-started
+  - source: /doss/concepts
+    destination: /concepts
+  - source: /doss/commands
+    destination: /commands
+  - source: /doss/how-it-works
+    destination: /how-it-works
 
 check:
   rules:
@@ -18,9 +61,8 @@ check:
 
 navigation:
   - section: Doss
+    skip-slug: true
     contents:
-      - page: Overview
-        path: docs/pages/index.mdx
       - page: Getting started
         path: docs/pages/getting-started.mdx
       - page: Concepts
